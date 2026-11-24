@@ -3,14 +3,18 @@ package com.projet4.transporturbain.Controller;
 import com.projet4.transporturbain.DTO.CourseRequestDTO;
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
 import com.projet4.transporturbain.DTO.PageResponseDTO;
+import com.projet4.transporturbain.DTO.ServiceJourDTO;
 import com.projet4.transporturbain.DTO.StatutRequestDTO;
 import com.projet4.transporturbain.Service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/courses")
@@ -24,6 +28,12 @@ public class CourseController {
     @GetMapping
     public PageResponseDTO<CourseResponseDTO> lister(@PageableDefault(size = 50) Pageable pageable) {
         return courseService.lister(pageable);
+    }
+
+    // F17 - GET /courses/jour?date=2026-11-15 : service de la journée groupé par ligne, aujourd'hui par défaut (200)
+    @GetMapping("/jour")
+    public ServiceJourDTO serviceDuJour(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return courseService.serviceDuJour(date);
     }
 
     // GET /courses/{id} : détail d'une course (200, ou 404)

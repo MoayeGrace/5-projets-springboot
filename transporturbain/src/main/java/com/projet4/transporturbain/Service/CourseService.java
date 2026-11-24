@@ -3,6 +3,7 @@ package com.projet4.transporturbain.Service;
 import com.projet4.transporturbain.DTO.CourseRequestDTO;
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
 import com.projet4.transporturbain.DTO.PageResponseDTO;
+import com.projet4.transporturbain.DTO.ServiceJourDTO;
 import com.projet4.transporturbain.DTO.StatutRequestDTO;
 import com.projet4.transporturbain.Entity.BusEntity;
 import com.projet4.transporturbain.Entity.ConducteurEntity;
@@ -23,7 +24,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.projet4.transporturbain.Service.ServiceUtils.trouverOu404;
 
@@ -74,6 +77,31 @@ public class CourseService {
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
+    }
+
+    // F17 - GET /courses/jour?date= : courses de la journée (aujourd'hui par défaut) groupées par ligne puis par heure,
+    // avec le nombre de courses annulées par ligne
+    public ServiceJourDTO serviceDuJour(LocalDate date) {
+        LocalDate jour = (date != null) ? date : LocalDate.now();
+        ServiceJourDTO dto = new ServiceJourDTO();
+        dto.setDate(jour);
+        Map<Long, ServiceJourDTO.Ligne> parLigne = new LinkedHashMap<>();
+        for (CourseEntity course : courseRepository.findByDateCourseOrderByLigneNumeroAscHeureDepartAsc(jour)) {
+            ServiceJourDTO.Ligne ligne = parLigne.computeIfAbsent(course.getLigne().getId(), id -> {
+                ServiceJourDTO.Ligne nouvelle = new ServiceJourDTO.Ligne();
+                nouvelle.setLigneId(id);
+                nouvelle.setLigneNumero(course.getLigne().getNumero());
+                nouvelle.setLigneLibelle(course.getLigne().getLibelle());
+                return nouvelle;
+            });
+            ligne.getCourses().add(entityVersResponseDTO(course));
+            ligne.setNombreCourses(ligne.getNombreCourses() + 1);
+            if (course.getStatut() == StatutCourse.ANNULEE) {
+                ligne.setNombreAnnulees(ligne.getNombreAnnulees() + 1);
+            }
+        }
+        dto.getLignes().addAll(parLigne.values());
+        return dto;
     }
 
     // GET /courses/{id} : récupère une course par son id (404 si introuvable)
