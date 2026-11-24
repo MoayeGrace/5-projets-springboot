@@ -33,6 +33,15 @@ public class PaiementService {
         return entityVersResponseDTO(trouverOu404(paiementRepository, id, "Paiement"));
     }
 
+    // F9 - GET /prets/{id}/paiements : paiements du prêt du plus récent au plus ancien (404 si le prêt n'existe pas)
+    public List<PaiementResponseDTO> listerParPret(Long pretId) {
+        trouverOu404(pretRepository, pretId, "Prêt");
+        return paiementRepository.findByPretIdOrderByDatePaiementDescIdDesc(pretId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /paiements : enregistre un paiement reçu (INSERT), rattaché à son prêt
     public PaiementResponseDTO creer(PaiementRequestDTO dto) {
         PaiementEntity paiement = new PaiementEntity();
