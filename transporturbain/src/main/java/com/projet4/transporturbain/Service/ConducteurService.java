@@ -54,6 +54,9 @@ public class ConducteurService {
         conducteur.setNom(dto.getNom());
         conducteur.setMatricule(dto.getMatricule());
         conducteur.setNumeroPermis(dto.getNumeroPermis());
+        if (!dto.getDateValiditePermis().equals(conducteur.getDateValiditePermis())) {
+            conducteur.setAlertePermisEnvoyee(false);   // F16 - nouveau permis : il pourra de nouveau être signalé
+        }
         conducteur.setDateValiditePermis(dto.getDateValiditePermis());   // F14 - un renouvellement rend le conducteur affectable
     }
 

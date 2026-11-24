@@ -32,6 +32,10 @@ public class ConducteurEntity {
     // F14 - date jusqu'à laquelle le permis est valide
     private LocalDate dateValiditePermis;
 
+    // F16 - vrai quand l'expiration proche du permis a déjà été signalée (remis à faux au renouvellement)
+    @Column(nullable = false)
+    private Boolean alertePermisEnvoyee = false;
+
     @OneToMany(mappedBy = "conducteur")
     private List<CourseEntity> courses = new ArrayList<>();
 }

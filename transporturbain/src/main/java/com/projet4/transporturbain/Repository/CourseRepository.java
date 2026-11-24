@@ -20,6 +20,10 @@ public interface CourseRepository extends JpaRepository<CourseEntity, Long> {
     // F13 : les courses d'un conducteur qui n'ont pas un statut donné (ex : hors annulées)
     List<CourseEntity> findByConducteurIdAndStatutNot(Long conducteurId, StatutCourse statut);
 
+    // F16 : courses d'un conducteur programmées après une date, avec un statut donné (ex : PREVUE)
+    List<CourseEntity> findByConducteurIdAndDateCourseAfterAndStatutOrderByDateCourseAscHeureDepartAsc(
+            Long conducteurId, LocalDate date, StatutCourse statut);
+
     // F8 : les courses d'un conducteur entre deux dates, triées par date puis heure de départ
     List<CourseEntity> findByConducteurIdAndDateCourseBetweenOrderByDateCourseAscHeureDepartAsc(Long conducteurId, LocalDate du, LocalDate au);
 }
