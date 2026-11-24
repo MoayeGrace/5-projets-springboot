@@ -1,7 +1,9 @@
 package com.projet4.transporturbain.Controller;
 
+import com.projet4.transporturbain.DTO.DesserteResponseDTO;
 import com.projet4.transporturbain.DTO.LigneRequestDTO;
 import com.projet4.transporturbain.DTO.LigneResponseDTO;
+import com.projet4.transporturbain.Service.DesserteService;
 import com.projet4.transporturbain.Service.LigneService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,13 @@ import java.util.List;
 public class LigneController {
 
     private final LigneService ligneService;
+    private final DesserteService desserteService;   // F6
+
+    // F6 - GET /lignes/{id}/arrets : tracé de la ligne, arrêts dans l'ordre de desserte (200, ou 404)
+    @GetMapping("/{id}/arrets")
+    public List<DesserteResponseDTO> arrets(@PathVariable Long id) {
+        return desserteService.arretsDeLaLigne(id);
+    }
 
     // GET /lignes : réseau des lignes (200)
     @GetMapping
