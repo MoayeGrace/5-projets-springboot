@@ -2,12 +2,16 @@ package com.projet2.microfinance.Controller;
 
 import com.projet2.microfinance.DTO.EcheanceRequestDTO;
 import com.projet2.microfinance.DTO.EcheanceResponseDTO;
+import com.projet2.microfinance.DTO.ImpayeClientDTO;
 import com.projet2.microfinance.Service.EcheanceService;
+import com.projet2.microfinance.Service.ImpayeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -16,11 +20,18 @@ import java.util.List;
 public class EcheanceController {
 
     private final EcheanceService echeanceService;
+    private final ImpayeService impayeService;   // F18
 
     // GET /echeances : liste de toutes les échéances (200)
     @GetMapping
     public List<EcheanceResponseDTO> lister() {
         return echeanceService.lister();
+    }
+
+    // F18 - GET /echeances/impayees?date=2026-11-30 : impayés à la date (aujourd'hui par défaut), groupés par client (200)
+    @GetMapping("/impayees")
+    public List<ImpayeClientDTO> impayees(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return impayeService.impayesParClient(date != null ? date : LocalDate.now());
     }
 
     // GET /echeances/{id} : détail d'une échéance (200, ou 404)

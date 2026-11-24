@@ -58,6 +58,18 @@ public class ImpayeService {
         return alertes;
     }
 
+    // F18 - GET /echeances/impayees?date= : échéances antérieures à la date avec un reste à payer, groupées par client
+    // (montant dû et plus grand retard) ; les prêts soldés sont exclus par la requête
+    public List<ImpayeClientDTO> impayesParClient(LocalDate date) {
+        Map<Long, ImpayeClientDTO> parClient = new LinkedHashMap<>();
+        for (EcheanceEntity echeance : echeanceRepository.findImpayees(date)) {
+            PretEntity pret = echeance.getPret();
+            ImpayeClientDTO client = parClient.computeIfAbsent(pret.getClient().getId(), id -> nouveauClient(pret));
+            ajouterEcheance(client, echeance, date);
+        }
+        return new ArrayList<>(parClient.values());
+    }
+
     // F16 - nouvelle ligne client, vide
     private ImpayeClientDTO nouveauClient(PretEntity pret) {
         ImpayeClientDTO client = new ImpayeClientDTO();
