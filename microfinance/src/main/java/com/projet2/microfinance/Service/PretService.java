@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static com.projet2.microfinance.Service.ServiceUtils.trouverOu404;
@@ -29,6 +30,9 @@ public class PretService {
 
     // F10 - taille de page maximale autorisée
     private static final int TAILLE_PAGE_MAX = 100;
+
+    // F12 - nombre maximal de prêts actifs (non soldés) par client
+    private static final int MAX_PRETS_ACTIFS = 3;
 
     // F10 - GET /prets?statut=&page=&size=&sort= : portefeuille filtré par statut (tous si absent), page par page
     public PageResponseDTO<PretResponseDTO> lister(StatutPret statut, Pageable pageable) {
@@ -58,6 +62,7 @@ public class PretService {
 
     // POST /prets : enregistre un nouveau prêt (INSERT), rattaché à son client
     public PretResponseDTO creer(PretRequestDTO dto) {
+        verifierLimites(dto);   // F12
         PretEntity pret = new PretEntity();
         dtoVersEntity(dto, pret);
         return entityVersResponseDTO(pretRepository.save(pret));
@@ -69,6 +74,22 @@ public class PretService {
         verifierParametresFiges(pret, dto);   // F11
         dtoVersEntity(dto, pret);
         return entityVersResponseDTO(pretRepository.save(pret));
+    }
+
+    // F12 - au plus 3 prêts actifs par client, et un total emprunté (prêts actifs + nouveau) qui ne dépasse pas son plafond (409)
+    private void verifierLimites(PretRequestDTO dto) {
+        ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
+        long pretsActifs = pretRepository.countByClientIdAndStatutNot(client.getId(), StatutPret.SOLDE);
+        if (pretsActifs >= MAX_PRETS_ACTIFS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le client a déjà " + pretsActifs + " prêts actifs (maximum " + MAX_PRETS_ACTIFS + ")");
+        }
+        BigDecimal dejaEmprunte = pretRepository.sommeMontantsSaufStatut(client.getId(), StatutPret.SOLDE);
+        if (dejaEmprunte.add(dto.getMontant()).compareTo(client.getPlafondEmprunt()) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Plafond atteint : " + pretsActifs + " prêt(s) actif(s) pour " + dejaEmprunte
+                            + ", + " + dto.getMontant() + " dépasse le plafond de " + client.getPlafondEmprunt());
+        }
     }
 
     // F11 - une fois l'échéancier généré, le montant, la durée, le taux et la date d'accord ne peuvent plus changer (409)
