@@ -1,6 +1,7 @@
 package com.projet4.transporturbain.Controller;
 
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
+import com.projet4.transporturbain.DTO.DesserteRequestDTO;
 import com.projet4.transporturbain.DTO.DesserteResponseDTO;
 import com.projet4.transporturbain.DTO.LigneRequestDTO;
 import com.projet4.transporturbain.DTO.LigneResponseDTO;
@@ -24,6 +25,13 @@ public class LigneController {
     private final LigneService ligneService;
     private final DesserteService desserteService;   // F6
     private final CourseService courseService;       // F7
+
+    // F11 - POST /lignes/{id}/arrets : ajoute un arrêt au tracé, à une position et dans un sens (201, 400, 404 ou 409)
+    @PostMapping("/{id}/arrets")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<DesserteResponseDTO> ajouterArret(@PathVariable Long id, @Valid @RequestBody DesserteRequestDTO dto) {
+        return desserteService.ajouterArret(id, dto);
+    }
 
     // F7 - GET /lignes/{id}/courses?date=2026-11-15 : service de la ligne sur une journée, aujourd'hui par défaut (200, ou 404)
     @GetMapping("/{id}/courses")
