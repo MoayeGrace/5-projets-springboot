@@ -39,6 +39,7 @@ public class OrdreFabricationService {
     private final MachineRepository machineRepository;
     private final OperateurRepository operateurRepository;
     private final DeploiementService deploiementService;   // F14
+    private final VersionNomenclatureService versionNomenclatureService;   // F15
 
     // F8 - GET /ordres-fabrication?statut= : ordres du statut demandé (tous si absent), triés par date prévue
     public List<OrdreFabricationResponseDTO> lister(StatutOrdre statut) {
@@ -121,6 +122,9 @@ public class OrdreFabricationService {
         }
         if (nouveauStatut == StatutOrdre.LANCE) {
             reserverComposants(ordre);    // F14
+            // F15 - l'ordre garde la version de nomenclature en vigueur à son lancement
+            versionNomenclatureService.versionEnVigueur(ordre.getArticle().getId(), LocalDateTime.now())
+                    .ifPresent(ordre::setVersionNomenclature);
         } else if (nouveauStatut == StatutOrdre.ANNULE && ordre.getStatut() == StatutOrdre.LANCE) {
             libererComposants(ordre);     // F14 - un ordre lancé puis annulé rend sa matière au magasin
         }
@@ -202,6 +206,9 @@ public class OrdreFabricationService {
         dto.setMachineCode(ordre.getMachine().getCode());
         dto.setOperateurId(ordre.getOperateur().getId());
         dto.setOperateurNom(ordre.getOperateur().getNom());
+        if (ordre.getVersionNomenclature() != null) {   // F15
+            dto.setVersionNomenclature(ordre.getVersionNomenclature().getNumero());
+        }
         dto.setHistorique(ordre.getHistorique().stream().map(h -> {   // F13
             HistoriqueStatutDTO ligne = new HistoriqueStatutDTO();
             ligne.setAncienStatut(h.getAncienStatut());

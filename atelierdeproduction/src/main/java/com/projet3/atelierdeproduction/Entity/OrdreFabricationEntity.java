@@ -50,6 +50,11 @@ public class OrdreFabricationEntity {
     @OrderBy("dateChangement ASC")
     private List<HistoriqueStatutEntity> historique = new ArrayList<>();
 
+    // F15 - version de nomenclature en vigueur au lancement : l'ordre y reste rattaché même si la nomenclature change
+    @ManyToOne
+    @JoinColumn(name = "version_nomenclature_id")
+    private VersionNomenclatureEntity versionNomenclature;
+
     // F14 - composants réservés au lancement ; cascade ALL : enregistrés et supprimés avec l'ordre
     @OneToMany(mappedBy = "ordre", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ConsommationEntity> consommations = new ArrayList<>();

@@ -30,5 +30,6 @@ public class OrdreFabricationResponseDTO {
     private Long operateurId;
     private String operateurNom;
 
+    private Integer versionNomenclature;            // F15 : numéro de la version utilisée au lancement
     private List<HistoriqueStatutDTO> historique;   // F13 : changements de statut horodatés
 }
