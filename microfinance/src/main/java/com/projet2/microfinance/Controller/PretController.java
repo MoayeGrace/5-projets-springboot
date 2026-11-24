@@ -1,7 +1,9 @@
 package com.projet2.microfinance.Controller;
 
+import com.projet2.microfinance.DTO.EcheancierDTO;
 import com.projet2.microfinance.DTO.PretRequestDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
+import com.projet2.microfinance.Service.EcheanceService;
 import com.projet2.microfinance.Service.PretService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import java.util.List;
 public class PretController {
 
     private final PretService pretService;
+    private final EcheanceService echeanceService;   // F8
 
     // GET /prets : portefeuille de prêts (200)
     @GetMapping
@@ -27,6 +30,12 @@ public class PretController {
     @GetMapping("/{id}")
     public PretResponseDTO detail(@PathVariable Long id) {
         return pretService.detail(id);
+    }
+
+    // F8 - GET /prets/{id}/echeances : échéancier du prêt, trié par date, avec le payé et le reste à payer (200, ou 404)
+    @GetMapping("/{id}/echeances")
+    public EcheancierDTO echeances(@PathVariable Long id) {
+        return echeanceService.echeancierDuPret(id);
     }
 
     // POST /prets : enregistrement d'un prêt accordé (201, ou 400 si le JSON est invalide)

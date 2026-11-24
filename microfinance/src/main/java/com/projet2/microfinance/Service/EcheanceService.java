@@ -2,6 +2,7 @@ package com.projet2.microfinance.Service;
 
 import com.projet2.microfinance.DTO.EcheanceRequestDTO;
 import com.projet2.microfinance.DTO.EcheanceResponseDTO;
+import com.projet2.microfinance.DTO.EcheancierDTO;
 import com.projet2.microfinance.Entity.EcheanceEntity;
 import com.projet2.microfinance.Entity.PretEntity;
 import com.projet2.microfinance.Repository.EcheanceRepository;
@@ -31,6 +32,22 @@ public class EcheanceService {
     // GET /echeances/{id} : récupère une échéance par son id (404 si elle n'existe pas)
     public EcheanceResponseDTO detail(Long id) {
         return entityVersResponseDTO(trouverOu404(echeanceRepository, id, "Échéance"));
+    }
+
+    // F8 - GET /prets/{id}/echeances : échéancier du prêt trié par date (404 si le prêt n'existe pas, "non généré" s'il est vide)
+    public EcheancierDTO echeancierDuPret(Long pretId) {
+        trouverOu404(pretRepository, pretId, "Prêt");
+        List<EcheanceResponseDTO> echeances = echeanceRepository.findByPretIdOrderByDateEcheanceAscNumeroAsc(pretId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+
+        EcheancierDTO dto = new EcheancierDTO();
+        dto.setPretId(pretId);
+        dto.setGenere(!echeances.isEmpty());
+        dto.setMessage(echeances.isEmpty() ? "L'échéancier de ce prêt n'est pas encore généré" : null);
+        dto.setEcheances(echeances);
+        return dto;
     }
 
     // POST /echeances : saisit une nouvelle échéance (INSERT), rattachée à son prêt
