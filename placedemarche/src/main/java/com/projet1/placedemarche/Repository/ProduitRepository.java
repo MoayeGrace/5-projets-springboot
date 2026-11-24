@@ -2,8 +2,11 @@ package com.projet1.placedemarche.Repository;
 
 import com.projet1.placedemarche.Entity.ProduitEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Repository
@@ -14,4 +17,15 @@ public interface ProduitRepository extends JpaRepository<ProduitEntity, Long> {
 
     // F7 : les produits d'une catégorie, triés par prix croissant
     List<ProduitEntity> findByCategorieIdOrderByPrixAsc(Long categorieId);
+
+    // F9 : recherche avec critères facultatifs (un critère null est ignoré)
+    @Query("""
+            SELECT p FROM ProduitEntity p
+            WHERE (:nom IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', :nom, '%')))
+              AND (:prixMin IS NULL OR p.prix >= :prixMin)
+              AND (:prixMax IS NULL OR p.prix <= :prixMax)
+            """)
+    List<ProduitEntity> rechercher(@Param("nom") String nom,
+                                   @Param("prixMin") BigDecimal prixMin,
+                                   @Param("prixMax") BigDecimal prixMax);
 }

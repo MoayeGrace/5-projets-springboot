@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -17,10 +18,12 @@ public class ProduitController {
 
     private final ProduitService produitService;
 
-    // GET /produits : liste de tous les produits (200)
+    // F9 - GET /produits?nom=casque&prixMin=5000&prixMax=50000 : recherche, critères facultatifs (200, ou 400)
     @GetMapping
-    public List<ProduitResponseDTO> lister() {
-        return produitService.lister();
+    public List<ProduitResponseDTO> rechercher(@RequestParam(required = false) String nom,
+                                               @RequestParam(required = false) BigDecimal prixMin,
+                                               @RequestParam(required = false) BigDecimal prixMax) {
+        return produitService.rechercher(nom, prixMin, prixMax);
     }
 
     // GET /produits/{id} : détail d'un produit (200, ou 404)

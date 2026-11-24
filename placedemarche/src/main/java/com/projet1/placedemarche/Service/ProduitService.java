@@ -9,8 +9,11 @@ import com.projet1.placedemarche.Repository.CategorieRepository;
 import com.projet1.placedemarche.Repository.ProduitRepository;
 import com.projet1.placedemarche.Repository.VendeurRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static com.projet1.placedemarche.Service.ServiceUtils.trouverOu404;
@@ -23,9 +26,14 @@ public class ProduitService {
     private final VendeurRepository vendeurRepository;
     private final CategorieRepository categorieRepository;
 
-    // GET /produits : récupère tous les produits et les convertit en DTO
-    public List<ProduitResponseDTO> lister() {
-        return produitRepository.findAll()
+    // F9 - GET /produits?nom=&prixMin=&prixMax= : recherche par critères facultatifs (sans critère = tous les produits)
+    public List<ProduitResponseDTO> rechercher(String nom, BigDecimal prixMin, BigDecimal prixMax) {
+        if (prixMin != null && prixMax != null && prixMin.compareTo(prixMax) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Le prix minimum ne peut pas être supérieur au prix maximum");
+        }
+        String nomCherche = (nom == null || nom.isBlank()) ? null : nom.trim();
+        return produitRepository.rechercher(nomCherche, prixMin, prixMax)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
