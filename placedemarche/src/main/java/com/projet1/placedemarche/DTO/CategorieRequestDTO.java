@@ -1,0 +1,20 @@
+package com.projet1.placedemarche.DTO;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+public class CategorieRequestDTO {
+
+    @NotBlank(message = "Le libellé est obligatoire")
+    @Size(max = 100)
+    private String libelle;
+
+    @Size(max = 500)
+    private String description;
+}
