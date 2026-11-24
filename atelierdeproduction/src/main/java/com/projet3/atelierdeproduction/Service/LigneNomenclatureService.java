@@ -36,6 +36,15 @@ public class LigneNomenclatureService {
         return entityVersResponseDTO(trouverOu404(ligneNomenclatureRepository, id, "Ligne de nomenclature"));
     }
 
+    // F6 - GET /articles/{id}/nomenclature : composants directs triés par référence (vide pour un article ACHETE, 404 si inconnu)
+    public List<LigneNomenclatureResponseDTO> composantsDirects(Long articleId) {
+        trouverOu404(articleRepository, articleId, "Article");
+        return ligneNomenclatureRepository.findByComposeIdOrderByComposantReferenceAsc(articleId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /nomenclatures : saisit une nouvelle ligne (INSERT) : composé, composant et quantité
     public LigneNomenclatureResponseDTO creer(LigneNomenclatureRequestDTO dto) {
         LigneNomenclatureEntity ligne = new LigneNomenclatureEntity();

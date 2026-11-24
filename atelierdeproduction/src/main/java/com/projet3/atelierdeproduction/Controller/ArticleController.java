@@ -2,7 +2,9 @@ package com.projet3.atelierdeproduction.Controller;
 
 import com.projet3.atelierdeproduction.DTO.ArticleRequestDTO;
 import com.projet3.atelierdeproduction.DTO.ArticleResponseDTO;
+import com.projet3.atelierdeproduction.DTO.LigneNomenclatureResponseDTO;
 import com.projet3.atelierdeproduction.Service.ArticleService;
+import com.projet3.atelierdeproduction.Service.LigneNomenclatureService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import java.util.List;
 public class ArticleController {
 
     private final ArticleService articleService;
+    private final LigneNomenclatureService ligneNomenclatureService;   // F6
 
     // GET /articles : liste du catalogue d'articles (200)
     @GetMapping
@@ -27,6 +30,12 @@ public class ArticleController {
     @GetMapping("/{id}")
     public ArticleResponseDTO detail(@PathVariable Long id) {
         return articleService.detail(id);
+    }
+
+    // F6 - GET /articles/{id}/nomenclature : composants directs de l'article, triés par référence (200, ou 404)
+    @GetMapping("/{id}/nomenclature")
+    public List<LigneNomenclatureResponseDTO> nomenclature(@PathVariable Long id) {
+        return ligneNomenclatureService.composantsDirects(id);
     }
 
     // POST /articles : création d'un article (201, ou 400 si le JSON est invalide)
