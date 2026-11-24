@@ -98,17 +98,41 @@ public class CommandeService {
         return entityVersResponseDTO(commandeRepository.save(commande));
     }
 
-    // DELETE /commandes/{id} : vérifie que la commande existe (404 sinon), puis la supprime
+    // DELETE /commandes/{id} : l'énoncé CRUD dit "supprime une commande annulée" -> seule une commande ANNULEE est supprimable
+    // (son stock a déjà été rendu par F14 ; son historique est supprimé avec elle grâce à la cascade)
+    @Transactional
     public void supprimer(Long id) {
-        commandeRepository.delete(trouverOu404(commandeRepository, id, "Commande"));
+        CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
+        if (commande.getStatut() != StatutCommande.ANNULEE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Seule une commande ANNULEE peut être supprimée : annulez-la d'abord (POST /commandes/" + id + "/annulation)");
+        }
+        commandeRepository.delete(commande);
     }
 
     // F13 - POST /commandes/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon)
     @Transactional
     public CommandeResponseDTO changerStatut(Long id, StatutCommande nouveauStatut) {
+        if (nouveauStatut == StatutCommande.ANNULEE) {
+            return annuler(id);   // F14 - une annulation doit aussi rendre le stock
+        }
         CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
         verifierTransition(commande, nouveauStatut);
         appliquerStatut(commande, nouveauStatut);
+        return entityVersResponseDTO(commandeRepository.save(commande));
+    }
+
+    // F14 - POST /commandes/{id}/annulation : seule une commande EN_ATTENTE ou PAYEE est annulable ;
+    // statut et stock changent dans la même transaction, le stock est recrédité de la quantité commandée
+    @Transactional
+    public CommandeResponseDTO annuler(Long id) {
+        CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
+        verifierTransition(commande, StatutCommande.ANNULEE);   // 409 si EXPEDIEE, LIVREE ou déjà ANNULEE
+
+        ProduitEntity produit = produitVerrouille(commande.getProduit().getId());
+        produit.modifierStock(produit.getStock() + commande.getQuantite());
+
+        appliquerStatut(commande, StatutCommande.ANNULEE);
         return entityVersResponseDTO(commandeRepository.save(commande));
     }
 

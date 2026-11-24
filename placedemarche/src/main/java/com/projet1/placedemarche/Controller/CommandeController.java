@@ -44,7 +44,7 @@ public class CommandeController {
         return commandeService.modifier(id, dto);
     }
 
-    // DELETE /commandes/{id} : suppression d'une commande (204, ou 404)
+    // DELETE /commandes/{id} : suppression d'une commande ANNULEE (204 ; 404 ; 409 si pas annulée)
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void supprimer(@PathVariable Long id) {
@@ -61,5 +61,11 @@ public class CommandeController {
     @GetMapping("/{id}/historique")
     public List<HistoriqueStatutDTO> historique(@PathVariable Long id) {
         return commandeService.historique(id);
+    }
+
+    // F14 - POST /commandes/{id}/annulation : annule et restitue le stock (200 ; 409 si EXPEDIEE, LIVREE ou déjà annulée)
+    @PostMapping("/{id}/annulation")
+    public CommandeResponseDTO annuler(@PathVariable Long id) {
+        return commandeService.annuler(id);
     }
 }
