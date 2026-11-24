@@ -2,12 +2,16 @@ package com.projet4.transporturbain.Controller;
 
 import com.projet4.transporturbain.DTO.BusRequestDTO;
 import com.projet4.transporturbain.DTO.BusResponseDTO;
+import com.projet4.transporturbain.DTO.ActiviteBusDTO;
 import com.projet4.transporturbain.Service.BusService;
+import com.projet4.transporturbain.Service.StatistiqueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -16,6 +20,14 @@ import java.util.List;
 public class BusController {
 
     private final BusService busService;
+    private final StatistiqueService statistiqueService;   // F19
+
+    // F19 - GET /bus/{id}/activite?mois=2026-11 : courses assurées, heures de service, lignes desservies (200, 400 ou 404)
+    @GetMapping("/{id}/activite")
+    public ActiviteBusDTO activite(@PathVariable Long id,
+                                   @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth mois) {
+        return statistiqueService.activiteBus(id, mois);
+    }
 
     // GET /bus : parc de bus (200)
     @GetMapping
