@@ -30,6 +30,9 @@ public interface PretRepository extends JpaRepository<PretEntity, Long> {
     @Query("SELECT p FROM PretEntity p WHERE p.id = :id")
     Optional<PretEntity> findByIdAvecVerrou(@Param("id") Long id);
 
+    // F17 : les prêts d'un client ayant un statut donné
+    List<PretEntity> findByClientIdAndStatut(Long clientId, StatutPret statut);
+
     // F12 : nombre de prêts actifs (non soldés) d'un client
     long countByClientIdAndStatutNot(Long clientId, StatutPret statut);
 

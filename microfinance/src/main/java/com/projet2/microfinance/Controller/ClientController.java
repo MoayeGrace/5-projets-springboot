@@ -3,10 +3,12 @@ package com.projet2.microfinance.Controller;
 import com.projet2.microfinance.DTO.ClientRequestDTO;
 import com.projet2.microfinance.DTO.ClientResponseDTO;
 import com.projet2.microfinance.DTO.CompteResponseDTO;
+import com.projet2.microfinance.DTO.EncoursDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
 import com.projet2.microfinance.Service.ClientService;
 import com.projet2.microfinance.Service.CompteService;
 import com.projet2.microfinance.Service.PretService;
+import com.projet2.microfinance.Service.StatistiqueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +24,7 @@ public class ClientController {
     private final ClientService clientService;
     private final CompteService compteService;   // F6
     private final PretService pretService;       // F7
+    private final StatistiqueService statistiqueService;   // F17
 
     // GET /clients : liste de tous les clients (200)
     @GetMapping
@@ -45,6 +48,12 @@ public class ClientController {
     @GetMapping("/{id}/prets")
     public List<PretResponseDTO> prets(@PathVariable Long id) {
         return pretService.listerParClient(id);
+    }
+
+    // F17 - GET /clients/{id}/encours : engagement total du client sur ses prêts en cours, avec le détail par prêt (200, ou 404)
+    @GetMapping("/{id}/encours")
+    public EncoursDTO encours(@PathVariable Long id) {
+        return statistiqueService.encoursClient(id);
     }
 
     // POST /clients : création d'une fiche client (201, ou 400 si le JSON est invalide)
