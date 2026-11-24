@@ -47,6 +47,13 @@ public class PretController {
         return echeanceService.echeancierDuPret(id);
     }
 
+    // F11 - POST /prets/{id}/echeancier : génère le plan de remboursement et passe le prêt EN_COURS (201, 400, 404 ou 409)
+    @PostMapping("/{id}/echeancier")
+    @ResponseStatus(HttpStatus.CREATED)
+    public EcheancierDTO genererEcheancier(@PathVariable Long id) {
+        return echeanceService.genererEcheancier(id);
+    }
+
     // F9 - GET /prets/{id}/paiements : paiements du prêt, du plus récent au plus ancien (200, ou 404)
     @GetMapping("/{id}/paiements")
     public List<PaiementResponseDTO> paiements(@PathVariable Long id) {

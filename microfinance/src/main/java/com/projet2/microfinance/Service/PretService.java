@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -64,8 +66,24 @@ public class PretService {
     // PUT /prets/{id} : charge le prêt existant (404 sinon), remplace ses champs (dont le statut), puis UPDATE
     public PretResponseDTO modifier(Long id, PretRequestDTO dto) {
         PretEntity pret = trouverOu404(pretRepository, id, "Prêt");
+        verifierParametresFiges(pret, dto);   // F11
         dtoVersEntity(dto, pret);
         return entityVersResponseDTO(pretRepository.save(pret));
+    }
+
+    // F11 - une fois l'échéancier généré, le montant, la durée, le taux et la date d'accord ne peuvent plus changer (409)
+    private void verifierParametresFiges(PretEntity pret, PretRequestDTO dto) {
+        if (pret.getEcheances().isEmpty()) {
+            return;
+        }
+        boolean modifie = pret.getMontant().compareTo(dto.getMontant()) != 0
+                || !pret.getDureeMois().equals(dto.getDureeMois())
+                || pret.getTauxAnnuel().compareTo(dto.getTauxAnnuel()) != 0
+                || !pret.getDateAccord().equals(dto.getDateAccord());
+        if (modifie) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "L'échéancier est généré : le montant, la durée, le taux et la date d'accord sont figés");
+        }
     }
 
     // DELETE /prets/{id} : vérifie que le prêt existe (404 sinon), puis supprime le dossier
