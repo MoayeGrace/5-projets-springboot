@@ -149,6 +149,21 @@ public class CommandeService {
         }).toList();
     }
 
+    // F19 - GET /commandes/a-expedier/export : fichier CSV des commandes PAYEE, trié par vendeur
+    public String exporterAExpedierCsv() {
+        StringBuilder csv = new StringBuilder();
+        csv.append("numero_commande;vendeur;produit;quantite;client;adresse_livraison\n");
+        for (CommandeEntity c : commandeRepository.parStatutTrieesParVendeur(StatutCommande.PAYEE)) {
+            csv.append(c.getId()).append(';')
+               .append(champCsv(c.getProduit().getVendeur().getRaisonSociale())).append(';')
+               .append(champCsv(c.getProduit().getNom())).append(';')
+               .append(c.getQuantite()).append(';')
+               .append(champCsv(c.getClient().getNom())).append(';')
+               .append(champCsv(c.getClient().getAdresseLivraison())).append('\n');
+        }
+        return csv.toString();
+    }
+
     // ---------- Méthodes privées ----------
 
     // F12 - charge le produit en verrouillant sa ligne jusqu'à la fin de la transaction (404 s'il n'existe pas)
@@ -191,6 +206,11 @@ public class CommandeService {
         if (nouveauStatut == StatutCommande.LIVREE) {
             commande.setDateLivraison(LocalDateTime.now());
         }
+    }
+
+    // F19 - entoure le texte de guillemets (et double ceux qu'il contient) pour qu'un ";" ne casse pas les colonnes du CSV
+    private String champCsv(String valeur) {
+        return "\"" + (valeur == null ? "" : valeur.replace("\"", "\"\"")) + "\"";
     }
 
     // Entity -> DTO (le montant = prix unitaire x quantité est calculé ici)

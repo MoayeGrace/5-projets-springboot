@@ -48,4 +48,8 @@ public interface CommandeRepository extends JpaRepository<CommandeEntity, Long> 
                                     @Param("debut") LocalDateTime debut,
                                     @Param("fin") LocalDateTime fin,
                                     Pageable limite);
+
+    // F19 - commandes dans un statut donné (ici PAYEE), triées par vendeur pour faciliter le regroupement
+    @Query("SELECT c FROM CommandeEntity c WHERE c.statut = :statut ORDER BY c.produit.vendeur.raisonSociale, c.id")
+    List<CommandeEntity> parStatutTrieesParVendeur(@Param("statut") StatutCommande statut);
 }

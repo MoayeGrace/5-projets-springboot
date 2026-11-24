@@ -7,7 +7,10 @@ import com.projet1.placedemarche.DTO.StatutRequestDTO;
 import com.projet1.placedemarche.Service.CommandeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -67,5 +70,15 @@ public class CommandeController {
     @PostMapping("/{id}/annulation")
     public CommandeResponseDTO annuler(@PathVariable Long id) {
         return commandeService.annuler(id);
+    }
+
+    // F19 - GET /commandes/a-expedier/export : télécharge le fichier CSV des commandes PAYEE triées par vendeur
+    // ResponseEntity permet de régler nous-mêmes le type (text/csv) et l'en-tête de téléchargement
+    @GetMapping("/a-expedier/export")
+    public ResponseEntity<String> exporterAExpedier() {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"commandes-a-expedier.csv\"")
+                .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                .body(commandeService.exporterAExpedierCsv());
     }
 }
