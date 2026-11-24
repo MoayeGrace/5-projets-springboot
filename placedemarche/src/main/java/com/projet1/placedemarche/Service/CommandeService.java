@@ -9,7 +9,9 @@ import com.projet1.placedemarche.Repository.ClientRepository;
 import com.projet1.placedemarche.Repository.CommandeRepository;
 import com.projet1.placedemarche.Repository.ProduitRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -69,6 +71,7 @@ public class CommandeService {
     private void dtoVersEntity(CommandeRequestDTO dto, CommandeEntity commande) {
         ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
         ProduitEntity produit = trouverOu404(produitRepository, dto.getProduitId(), "Produit");
+        verifierStock(produit, dto.getQuantite());   // F11 - la quantité commandée ne doit pas dépasser le stock
 
         // F15 : prix copié seulement pour une nouvelle commande ou un changement de produit, sinon il reste figé
         boolean produitChange = commande.getProduit() == null
@@ -84,6 +87,18 @@ public class CommandeService {
         // Statut facultatif : si absent, on garde l'actuel (EN_ATTENTE pour une nouvelle commande)
         if (dto.getStatut() != null) {
             commande.setStatut(dto.getStatut());
+        }
+    }
+
+    // F11 - refuse la commande si le produit est en rupture ou si la quantité dépasse le stock (409 avec le stock restant)
+    private void verifierStock(ProduitEntity produit, int quantite) {
+        if (produit.getStock() == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le produit « " + produit.getNom() + " » est en rupture de stock");
+        }
+        if (quantite > produit.getStock()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Stock insuffisant pour « " + produit.getNom() + " » : " + produit.getStock() + " restant(s), " + quantite + " demandé(s)");
         }
     }
 

@@ -29,7 +29,7 @@ public class CommandeController {
         return commandeService.detail(id);
     }
 
-    // POST /commandes : création d'une commande (201, ou 400 si le JSON est invalide)
+    // POST /commandes : création d'une commande (201 ; 400 JSON invalide ; 409 stock insuffisant - F11)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CommandeResponseDTO creer(@Valid @RequestBody CommandeRequestDTO dto) {
