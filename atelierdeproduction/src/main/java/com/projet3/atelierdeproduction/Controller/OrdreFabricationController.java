@@ -2,6 +2,7 @@ package com.projet3.atelierdeproduction.Controller;
 
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
+import com.projet3.atelierdeproduction.Entity.StatutOrdre;
 import com.projet3.atelierdeproduction.Service.OrdreFabricationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +18,10 @@ public class OrdreFabricationController {
 
     private final OrdreFabricationService ordreFabricationService;
 
-    // GET /ordres-fabrication : carnet des ordres de fabrication (200)
+    // F8 - GET /ordres-fabrication?statut=LANCE : ordres filtrés par statut, triés par date prévue (200, ou 400 si statut inconnu)
     @GetMapping
-    public List<OrdreFabricationResponseDTO> lister() {
-        return ordreFabricationService.lister();
+    public List<OrdreFabricationResponseDTO> lister(@RequestParam(required = false) StatutOrdre statut) {
+        return ordreFabricationService.lister(statut);
     }
 
     // GET /ordres-fabrication/{id} : détail d'un ordre (200, ou 404)

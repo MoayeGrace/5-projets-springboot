@@ -6,6 +6,7 @@ import com.projet3.atelierdeproduction.Entity.ArticleEntity;
 import com.projet3.atelierdeproduction.Entity.MachineEntity;
 import com.projet3.atelierdeproduction.Entity.OperateurEntity;
 import com.projet3.atelierdeproduction.Entity.OrdreFabricationEntity;
+import com.projet3.atelierdeproduction.Entity.StatutOrdre;
 import com.projet3.atelierdeproduction.Repository.ArticleRepository;
 import com.projet3.atelierdeproduction.Repository.MachineRepository;
 import com.projet3.atelierdeproduction.Repository.OperateurRepository;
@@ -26,10 +27,12 @@ public class OrdreFabricationService {
     private final MachineRepository machineRepository;
     private final OperateurRepository operateurRepository;
 
-    // GET /ordres-fabrication : récupère tout le carnet d'ordres
-    public List<OrdreFabricationResponseDTO> lister() {
-        return ordreFabricationRepository.findAll()
-                .stream()
+    // F8 - GET /ordres-fabrication?statut= : ordres du statut demandé (tous si absent), triés par date prévue
+    public List<OrdreFabricationResponseDTO> lister(StatutOrdre statut) {
+        List<OrdreFabricationEntity> ordres = (statut == null)
+                ? ordreFabricationRepository.findAllByOrderByDatePrevueAsc()
+                : ordreFabricationRepository.findByStatutOrderByDatePrevueAsc(statut);
+        return ordres.stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
     }
