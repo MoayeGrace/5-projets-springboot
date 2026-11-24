@@ -1,14 +1,18 @@
 package com.projet2.microfinance.Controller;
 
 import com.projet2.microfinance.DTO.EcheancierDTO;
+import com.projet2.microfinance.DTO.PageResponseDTO;
 import com.projet2.microfinance.DTO.PaiementResponseDTO;
 import com.projet2.microfinance.DTO.PretRequestDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
 import com.projet2.microfinance.Service.EcheanceService;
 import com.projet2.microfinance.Service.PaiementService;
+import com.projet2.microfinance.Entity.StatutPret;
 import com.projet2.microfinance.Service.PretService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,10 +27,12 @@ public class PretController {
     private final EcheanceService echeanceService;   // F8
     private final PaiementService paiementService;   // F9
 
-    // GET /prets : portefeuille de prêts (200)
+    // F10 - GET /prets?statut=EN_COURS&page=0&size=20 : prêts filtrés par statut, page par page (200, ou 400 si statut inconnu)
+    // Pageable : Spring le remplit tout seul à partir de page, size et sort ; @PageableDefault = 1re page de 20 éléments
     @GetMapping
-    public List<PretResponseDTO> lister() {
-        return pretService.lister();
+    public PageResponseDTO<PretResponseDTO> lister(@RequestParam(required = false) StatutPret statut,
+                                                   @PageableDefault(size = 20) Pageable pageable) {
+        return pretService.lister(statut, pageable);
     }
 
     // GET /prets/{id} : détail d'un prêt (200, ou 404)

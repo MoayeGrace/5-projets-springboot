@@ -1,5 +1,6 @@
 package com.projet2.microfinance.Service;
 
+import com.projet2.microfinance.DTO.PageResponseDTO;
 import com.projet2.microfinance.DTO.PretRequestDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
 import com.projet2.microfinance.Entity.ClientEntity;
@@ -8,6 +9,9 @@ import com.projet2.microfinance.Entity.StatutPret;
 import com.projet2.microfinance.Repository.ClientRepository;
 import com.projet2.microfinance.Repository.PretRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,12 +25,19 @@ public class PretService {
     private final PretRepository pretRepository;
     private final ClientRepository clientRepository;
 
-    // GET /prets : récupère tout le portefeuille de prêts
-    public List<PretResponseDTO> lister() {
-        return pretRepository.findAll()
-                .stream()
-                .map(this::entityVersResponseDTO)
-                .toList();
+    // F10 - taille de page maximale autorisée
+    private static final int TAILLE_PAGE_MAX = 100;
+
+    // F10 - GET /prets?statut=&page=&size=&sort= : portefeuille filtré par statut (tous si absent), page par page
+    public PageResponseDTO<PretResponseDTO> lister(StatutPret statut, Pageable pageable) {
+        // F10 - une taille trop grande est ramenée au maximum (on garde le numéro de page et le tri demandés)
+        if (pageable.getPageSize() > TAILLE_PAGE_MAX) {
+            pageable = PageRequest.of(pageable.getPageNumber(), TAILLE_PAGE_MAX, pageable.getSort());
+        }
+        Page<PretEntity> page = (statut == null)
+                ? pretRepository.findAll(pageable)
+                : pretRepository.findByStatut(statut, pageable);
+        return new PageResponseDTO<>(page.map(this::entityVersResponseDTO));
     }
 
     // GET /prets/{id} : récupère un prêt par son id (404 s'il n'existe pas)
