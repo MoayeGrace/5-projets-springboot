@@ -3,8 +3,10 @@ package com.projet2.microfinance.Controller;
 import com.projet2.microfinance.DTO.ClientRequestDTO;
 import com.projet2.microfinance.DTO.ClientResponseDTO;
 import com.projet2.microfinance.DTO.CompteResponseDTO;
+import com.projet2.microfinance.DTO.PretResponseDTO;
 import com.projet2.microfinance.Service.ClientService;
 import com.projet2.microfinance.Service.CompteService;
+import com.projet2.microfinance.Service.PretService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ public class ClientController {
 
     private final ClientService clientService;
     private final CompteService compteService;   // F6
+    private final PretService pretService;       // F7
 
     // GET /clients : liste de tous les clients (200)
     @GetMapping
@@ -36,6 +39,12 @@ public class ClientController {
     @GetMapping("/{id}/comptes")
     public List<CompteResponseDTO> comptes(@PathVariable Long id) {
         return compteService.listerParClient(id);
+    }
+
+    // F7 - GET /clients/{id}/prets : prêts du client, du plus récent au plus ancien, avec le capital restant dû (200, ou 404)
+    @GetMapping("/{id}/prets")
+    public List<PretResponseDTO> prets(@PathVariable Long id) {
+        return pretService.listerParClient(id);
     }
 
     // POST /clients : création d'une fiche client (201, ou 400 si le JSON est invalide)

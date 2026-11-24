@@ -4,6 +4,7 @@ import com.projet2.microfinance.DTO.PretRequestDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
 import com.projet2.microfinance.Entity.ClientEntity;
 import com.projet2.microfinance.Entity.PretEntity;
+import com.projet2.microfinance.Entity.StatutPret;
 import com.projet2.microfinance.Repository.ClientRepository;
 import com.projet2.microfinance.Repository.PretRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,15 @@ public class PretService {
     // GET /prets/{id} : récupère un prêt par son id (404 s'il n'existe pas)
     public PretResponseDTO detail(Long id) {
         return entityVersResponseDTO(trouverOu404(pretRepository, id, "Prêt"));
+    }
+
+    // F7 - GET /clients/{id}/prets : prêts d'un client du plus récent au plus ancien (404 si le client n'existe pas)
+    public List<PretResponseDTO> listerParClient(Long clientId) {
+        trouverOu404(clientRepository, clientId, "Client");
+        return pretRepository.findByClientIdOrderByDateAccordDescIdDesc(clientId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
     }
 
     // POST /prets : enregistre un nouveau prêt (INSERT), rattaché à son client
@@ -77,6 +87,8 @@ public class PretService {
         dto.setDateAccord(pret.getDateAccord());
         dto.setStatut(pret.getStatut());
         dto.setAgent(pret.getAgent());
+        dto.setCapitalRestantDu(pret.capitalRestantDu());           // F7
+        dto.setSolde(pret.getStatut() == StatutPret.SOLDE);         // F7
         dto.setClientId(pret.getClient().getId());
         dto.setClientNom(pret.getClient().getNom());
         return dto;

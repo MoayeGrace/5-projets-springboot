@@ -52,4 +52,17 @@ public class PretEntity {
 
     @OneToMany(mappedBy = "pret")
     private List<PaiementEntity> paiements = new ArrayList<>();
+
+    // F7 - capital restant dû : 0 si soldé, le montant entier si l'échéancier n'existe pas encore, sinon la somme du capital non remboursé
+    public BigDecimal capitalRestantDu() {
+        if (statut == StatutPret.SOLDE) {
+            return BigDecimal.ZERO;
+        }
+        if (echeances.isEmpty()) {
+            return montant;
+        }
+        return echeances.stream()
+                .map(e -> e.getMontantCapital().subtract(e.getCapitalPaye()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }
