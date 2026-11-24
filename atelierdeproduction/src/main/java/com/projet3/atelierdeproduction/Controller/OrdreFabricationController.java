@@ -2,6 +2,7 @@ package com.projet3.atelierdeproduction.Controller;
 
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
+import com.projet3.atelierdeproduction.DTO.StatutRequestDTO;
 import com.projet3.atelierdeproduction.Entity.StatutOrdre;
 import com.projet3.atelierdeproduction.Service.OrdreFabricationService;
 import jakarta.validation.Valid;
@@ -37,10 +38,16 @@ public class OrdreFabricationController {
         return ordreFabricationService.creer(dto);
     }
 
-    // PUT /ordres-fabrication/{id} : modification d'un ordre, dont son statut (200, 400 ou 404)
+    // PUT /ordres-fabrication/{id} : modification d'un ordre, hors statut (200, 400, 404 ou 409)
     @PutMapping("/{id}")
     public OrdreFabricationResponseDTO modifier(@PathVariable Long id, @Valid @RequestBody OrdreFabricationRequestDTO dto) {
         return ordreFabricationService.modifier(id, dto);
+    }
+
+    // F13 - POST /ordres-fabrication/{id}/statut : { "statut": "LANCE" } fait avancer l'ordre (200, 400, 404 ou 409)
+    @PostMapping("/{id}/statut")
+    public OrdreFabricationResponseDTO changerStatut(@PathVariable Long id, @Valid @RequestBody StatutRequestDTO dto) {
+        return ordreFabricationService.changerStatut(id, dto.getStatut());
     }
 
     // DELETE /ordres-fabrication/{id} : suppression d'un ordre (204, ou 404)

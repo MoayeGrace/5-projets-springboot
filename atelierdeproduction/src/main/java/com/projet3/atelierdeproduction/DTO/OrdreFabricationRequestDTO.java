@@ -1,6 +1,5 @@
 package com.projet3.atelierdeproduction.DTO;
 
-import com.projet3.atelierdeproduction.Entity.StatutOrdre;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
@@ -12,6 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
+// F13 - pas de statut ici : un ordre est créé PLANIFIE et son statut ne change que par POST /ordres-fabrication/{id}/statut
 public class OrdreFabricationRequestDTO {
 
     @NotNull(message = "L'article est obligatoire")
@@ -23,9 +23,6 @@ public class OrdreFabricationRequestDTO {
 
     @NotNull(message = "La date prévue est obligatoire")
     private LocalDateTime datePrevue;
-
-    // Facultatif : PLANIFIE à la création si absent, inchangé à la modification si absent
-    private StatutOrdre statut;
 
     @NotNull(message = "La machine est obligatoire")
     private Long machineId;

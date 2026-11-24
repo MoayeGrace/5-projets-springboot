@@ -1,8 +1,10 @@
 package com.projet3.atelierdeproduction.Service;
 
+import com.projet3.atelierdeproduction.DTO.HistoriqueStatutDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
+import com.projet3.atelierdeproduction.Entity.HistoriqueStatutEntity;
 import com.projet3.atelierdeproduction.Entity.MachineEntity;
 import com.projet3.atelierdeproduction.Entity.OperateurEntity;
 import com.projet3.atelierdeproduction.Entity.OrdreFabricationEntity;
@@ -14,6 +16,7 @@ import com.projet3.atelierdeproduction.Repository.OrdreFabricationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
@@ -102,7 +105,30 @@ public class OrdreFabricationService {
         ordreFabricationRepository.delete(trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication"));
     }
 
-    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; statut absent = inchangé)
+    // F13 - POST /ordres-fabrication/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon)
+    @Transactional
+    public OrdreFabricationResponseDTO changerStatut(Long id, StatutOrdre nouveauStatut) {
+        OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
+        if (!ordre.getStatut().statutsAtteignables().contains(nouveauStatut)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Passage de " + ordre.getStatut() + " à " + nouveauStatut + " interdit. Statuts atteignables : "
+                            + ordre.getStatut().statutsAtteignables());
+        }
+        appliquerStatut(ordre, nouveauStatut);
+        return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+    }
+
+    // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement)
+    private void appliquerStatut(OrdreFabricationEntity ordre, StatutOrdre nouveauStatut) {
+        HistoriqueStatutEntity ligne = new HistoriqueStatutEntity();
+        ligne.setOrdre(ordre);
+        ligne.setAncienStatut(ordre.getStatut());
+        ligne.setNouveauStatut(nouveauStatut);
+        ordre.getHistorique().add(ligne);   // enregistré avec l'ordre grâce à la cascade
+        ordre.setStatut(nouveauStatut);
+    }
+
+    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; le statut n'est pas modifiable ici, F13)
     private void dtoVersEntity(OrdreFabricationRequestDTO dto, OrdreFabricationEntity ordre) {
         ArticleEntity article = trouverOu404(articleRepository, dto.getArticleId(), "Article");
         MachineEntity machine = trouverOu404(machineRepository, dto.getMachineId(), "Machine");
@@ -111,9 +137,6 @@ public class OrdreFabricationService {
         ordre.setArticle(article);
         ordre.setQuantite(dto.getQuantite());
         ordre.setDatePrevue(dto.getDatePrevue());
-        if (dto.getStatut() != null) {
-            ordre.setStatut(dto.getStatut());
-        }
         ordre.setMachine(machine);
         ordre.setOperateur(operateur);
     }
@@ -133,6 +156,13 @@ public class OrdreFabricationService {
         dto.setMachineCode(ordre.getMachine().getCode());
         dto.setOperateurId(ordre.getOperateur().getId());
         dto.setOperateurNom(ordre.getOperateur().getNom());
+        dto.setHistorique(ordre.getHistorique().stream().map(h -> {   // F13
+            HistoriqueStatutDTO ligne = new HistoriqueStatutDTO();
+            ligne.setAncienStatut(h.getAncienStatut());
+            ligne.setNouveauStatut(h.getNouveauStatut());
+            ligne.setDateChangement(h.getDateChangement());
+            return ligne;
+        }).toList());
         return dto;
     }
 }

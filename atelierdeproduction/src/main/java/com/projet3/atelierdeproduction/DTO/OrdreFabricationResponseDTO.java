@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -28,4 +29,6 @@ public class OrdreFabricationResponseDTO {
 
     private Long operateurId;
     private String operateurNom;
+
+    private List<HistoriqueStatutDTO> historique;   // F13 : changements de statut horodatés
 }

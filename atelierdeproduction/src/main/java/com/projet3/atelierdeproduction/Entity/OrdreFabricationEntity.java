@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "ordre_fabrication")
@@ -42,6 +44,11 @@ public class OrdreFabricationEntity {
     @ManyToOne
     @JoinColumn(name = "operateur_id", nullable = false)
     private OperateurEntity operateur;
+
+    // F13 - historique des changements de statut ; cascade ALL : enregistré et supprimé avec l'ordre
+    @OneToMany(mappedBy = "ordre", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("dateChangement ASC")
+    private List<HistoriqueStatutEntity> historique = new ArrayList<>();
 
     // F12 - fin du créneau machine : début + quantité × temps unitaire de la gamme
     public LocalDateTime dateFinPrevue() {
