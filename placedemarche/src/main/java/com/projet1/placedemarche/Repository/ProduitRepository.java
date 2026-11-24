@@ -40,4 +40,7 @@ public interface ProduitRepository extends JpaRepository<ProduitEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM ProduitEntity p WHERE p.id = :id")
     Optional<ProduitEntity> findByIdAvecVerrou(@Param("id") Long id);
+
+    // F16 - produits en stock faible (<= seuil) pas encore signalés
+    List<ProduitEntity> findByStockLessThanEqualAndAlerteStockEnvoyeeFalse(Integer seuil);
 }

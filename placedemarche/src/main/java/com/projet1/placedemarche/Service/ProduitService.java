@@ -100,7 +100,7 @@ public class ProduitService {
         produit.setNom(dto.getNom());
         produit.setDescription(dto.getDescription());
         produit.setPrix(dto.getPrix());
-        produit.setStock(dto.getStock());
+        produit.modifierStock(dto.getStock());   // F16 - un réapprovisionnement au-dessus du seuil ré-autorise l'alerte
         produit.setVendeur(vendeur);
         produit.setCategorie(categorie);
     }
