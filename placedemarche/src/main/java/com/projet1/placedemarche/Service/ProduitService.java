@@ -36,6 +36,15 @@ public class ProduitService {
         return entityVersResponseDTO(trouverOu404(produitRepository, id, "Produit"));
     }
 
+    // F6 - GET /vendeurs/{id}/produits : produits d'un vendeur triés par nom (404 si le vendeur n'existe pas)
+    public List<ProduitResponseDTO> listerParVendeur(Long vendeurId) {
+        trouverOu404(vendeurRepository, vendeurId, "Vendeur");
+        return produitRepository.findByVendeurIdOrderByNomAsc(vendeurId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /produits : crée un nouveau produit (INSERT), rattaché à son vendeur et à sa catégorie
     public ProduitResponseDTO creer(ProduitRequestDTO dto) {
         ProduitEntity produit = new ProduitEntity();
