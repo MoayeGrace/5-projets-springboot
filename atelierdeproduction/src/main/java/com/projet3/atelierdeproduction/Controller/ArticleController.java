@@ -5,7 +5,9 @@ import com.projet3.atelierdeproduction.DTO.ArticleResponseDTO;
 import com.projet3.atelierdeproduction.DTO.LigneNomenclatureResponseDTO;
 import com.projet3.atelierdeproduction.DTO.PageResponseDTO;
 import com.projet3.atelierdeproduction.Service.ArticleService;
+import com.projet3.atelierdeproduction.DTO.NomenclatureCompleteDTO;
 import com.projet3.atelierdeproduction.DTO.VersionNomenclatureDTO;
+import com.projet3.atelierdeproduction.Service.DeploiementService;
 import com.projet3.atelierdeproduction.Service.LigneNomenclatureService;
 import com.projet3.atelierdeproduction.Service.VersionNomenclatureService;
 import jakarta.validation.Valid;
@@ -27,6 +29,7 @@ public class ArticleController {
     private final ArticleService articleService;
     private final LigneNomenclatureService ligneNomenclatureService;   // F6
     private final VersionNomenclatureService versionNomenclatureService;   // F15
+    private final DeploiementService deploiementService;                   // F17
 
     // F10 - GET /articles?page=0&size=30&sort=reference,asc : catalogue page par page (200, ou 400 si tri invalide)
     // Pageable : Spring le remplit tout seul à partir de page, size et sort ; @PageableDefault = 1re page de 30 éléments
@@ -51,6 +54,12 @@ public class ArticleController {
     @GetMapping("/{id}/utilisations")
     public List<LigneNomenclatureResponseDTO> utilisations(@PathVariable Long id) {
         return ligneNomenclatureService.utilisations(id);
+    }
+
+    // F17 - GET /articles/{id}/nomenclature-complete : arbre complet et liste des composants achetables (200, ou 404)
+    @GetMapping("/{id}/nomenclature-complete")
+    public NomenclatureCompleteDTO nomenclatureComplete(@PathVariable Long id) {
+        return deploiementService.nomenclatureComplete(id);
     }
 
     // F15 - POST /articles/{id}/nomenclature/version : ouvre une nouvelle version en préparation (201, 404 ou 409)
