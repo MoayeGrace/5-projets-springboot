@@ -2,9 +2,12 @@ package com.projet1.placedemarche.Service;
 
 import com.projet1.placedemarche.DTO.CommandeRequestDTO;
 import com.projet1.placedemarche.DTO.CommandeResponseDTO;
+import com.projet1.placedemarche.DTO.HistoriqueStatutDTO;
 import com.projet1.placedemarche.Entity.ClientEntity;
 import com.projet1.placedemarche.Entity.CommandeEntity;
+import com.projet1.placedemarche.Entity.HistoriqueStatutEntity;
 import com.projet1.placedemarche.Entity.ProduitEntity;
+import com.projet1.placedemarche.Entity.StatutCommande;
 import com.projet1.placedemarche.Repository.ClientRepository;
 import com.projet1.placedemarche.Repository.CommandeRepository;
 import com.projet1.placedemarche.Repository.ProduitRepository;
@@ -63,17 +66,18 @@ public class CommandeService {
         commande.setProduit(produit);
         commande.setQuantite(dto.getQuantite());
         commande.setPrixUnitaire(produit.getPrix());   // F15 - le prix du jour est copié et ne bougera plus
-        if (dto.getStatut() != null) {
-            commande.setStatut(dto.getStatut());
-        }
         return entityVersResponseDTO(commandeRepository.save(commande));
     }
 
-    // PUT /commandes/{id} + F11/F12 : l'ancienne quantité est rendue au stock puis la nouvelle est réservée,
-    // dans la même transaction (si le stock manque, tout est annulé)
+    // PUT /commandes/{id} + F11/F12 : seule une commande EN_ATTENTE est modifiable ; l'ancienne quantité est rendue au stock
+    // puis la nouvelle est réservée, dans la même transaction (si le stock manque, tout est annulé)
     @Transactional
     public CommandeResponseDTO modifier(Long id, CommandeRequestDTO dto) {
         CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
+        if (commande.getStatut() != StatutCommande.EN_ATTENTE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Seule une commande EN_ATTENTE peut être modifiée (statut actuel : " + commande.getStatut() + ")");
+        }
         ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
 
         // F12 - on rend d'abord l'ancienne quantité à l'ancien produit
@@ -91,15 +95,33 @@ public class CommandeService {
         commande.setClient(client);
         commande.setProduit(nouveauProduit);
         commande.setQuantite(dto.getQuantite());
-        if (dto.getStatut() != null) {
-            commande.setStatut(dto.getStatut());
-        }
         return entityVersResponseDTO(commandeRepository.save(commande));
     }
 
     // DELETE /commandes/{id} : vérifie que la commande existe (404 sinon), puis la supprime
     public void supprimer(Long id) {
         commandeRepository.delete(trouverOu404(commandeRepository, id, "Commande"));
+    }
+
+    // F13 - POST /commandes/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon)
+    @Transactional
+    public CommandeResponseDTO changerStatut(Long id, StatutCommande nouveauStatut) {
+        CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
+        verifierTransition(commande, nouveauStatut);
+        appliquerStatut(commande, nouveauStatut);
+        return entityVersResponseDTO(commandeRepository.save(commande));
+    }
+
+    // F13 - GET /commandes/{id}/historique : tous les changements de statut, horodatés, du plus ancien au plus récent
+    public List<HistoriqueStatutDTO> historique(Long id) {
+        CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
+        return commande.getHistorique().stream().map(h -> {
+            HistoriqueStatutDTO dto = new HistoriqueStatutDTO();
+            dto.setAncienStatut(h.getAncienStatut());
+            dto.setNouveauStatut(h.getNouveauStatut());
+            dto.setDateChangement(h.getDateChangement());
+            return dto;
+        }).toList();
     }
 
     // ---------- Méthodes privées ----------
@@ -121,6 +143,26 @@ public class CommandeService {
                     "Stock insuffisant pour « " + produit.getNom() + " » : " + produit.getStock() + " restant(s), " + quantite + " demandé(s)");
         }
         produit.modifierStock(produit.getStock() - quantite);
+    }
+
+    // F13 - 409 si la transition n'est pas autorisée, en indiquant les statuts atteignables
+    private void verifierTransition(CommandeEntity commande, StatutCommande nouveauStatut) {
+        if (!commande.getStatut().statutsAtteignables().contains(nouveauStatut)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Passage de " + commande.getStatut() + " à " + nouveauStatut + " interdit. Statuts atteignables : "
+                            + commande.getStatut().statutsAtteignables());
+        }
+    }
+
+    // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement)
+    private void appliquerStatut(CommandeEntity commande, StatutCommande nouveauStatut) {
+        HistoriqueStatutEntity ligne = new HistoriqueStatutEntity();
+        ligne.setCommande(commande);
+        ligne.setAncienStatut(commande.getStatut());
+        ligne.setNouveauStatut(nouveauStatut);
+        commande.getHistorique().add(ligne);   // enregistré avec la commande grâce à la cascade
+
+        commande.setStatut(nouveauStatut);
     }
 
     // Entity -> DTO (le montant = prix unitaire x quantité est calculé ici)

@@ -1,6 +1,5 @@
 package com.projet1.placedemarche.DTO;
 
-import com.projet1.placedemarche.Entity.StatutCommande;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
@@ -22,8 +21,6 @@ public class CommandeRequestDTO {
     @Positive(message = "La quantité doit être supérieure à 0")
     private Integer quantite;
 
-    // Facultatif : si absent, la commande démarre EN_ATTENTE
-    private StatutCommande statut;
-
-    // Pas de prixUnitaire ici : il est copié depuis le produit (F15)
+    // F13 - plus de statut ici : il évolue uniquement via POST /commandes/{id}/statut (transitions contrôlées)
+    // F15 - pas de prixUnitaire ici : il est copié depuis le produit
 }

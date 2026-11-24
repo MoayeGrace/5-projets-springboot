@@ -2,6 +2,8 @@ package com.projet1.placedemarche.Controller;
 
 import com.projet1.placedemarche.DTO.CommandeRequestDTO;
 import com.projet1.placedemarche.DTO.CommandeResponseDTO;
+import com.projet1.placedemarche.DTO.HistoriqueStatutDTO;
+import com.projet1.placedemarche.DTO.StatutRequestDTO;
 import com.projet1.placedemarche.Service.CommandeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,7 @@ public class CommandeController {
         return commandeService.creer(dto);
     }
 
-    // PUT /commandes/{id} : modification d'une commande (200 ; 400 ; 404 ; 409 stock insuffisant - F11)
+    // PUT /commandes/{id} : modification d'une commande EN_ATTENTE (200 ; 400 ; 404 ; 409 si statut ou stock - F11)
     @PutMapping("/{id}")
     public CommandeResponseDTO modifier(@PathVariable Long id, @Valid @RequestBody CommandeRequestDTO dto) {
         return commandeService.modifier(id, dto);
@@ -47,5 +49,17 @@ public class CommandeController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void supprimer(@PathVariable Long id) {
         commandeService.supprimer(id);
+    }
+
+    // F13 - POST /commandes/{id}/statut { "statut": "PAYEE" } : fait évoluer le statut (200 ; 409 si transition interdite)
+    @PostMapping("/{id}/statut")
+    public CommandeResponseDTO changerStatut(@PathVariable Long id, @Valid @RequestBody StatutRequestDTO dto) {
+        return commandeService.changerStatut(id, dto.getStatut());
+    }
+
+    // F13 - GET /commandes/{id}/historique : les changements de statut horodatés (200, ou 404)
+    @GetMapping("/{id}/historique")
+    public List<HistoriqueStatutDTO> historique(@PathVariable Long id) {
+        return commandeService.historique(id);
     }
 }

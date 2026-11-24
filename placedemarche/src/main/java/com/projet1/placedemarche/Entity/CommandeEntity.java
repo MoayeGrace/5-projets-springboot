@@ -9,6 +9,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "commande")
@@ -46,4 +48,9 @@ public class CommandeEntity {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime dateModification;
+
+    // F13 - historique des changements de statut ; cascade ALL : enregistré et supprimé avec la commande
+    @OneToMany(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("dateChangement ASC")
+    private List<HistoriqueStatutEntity> historique = new ArrayList<>();
 }
