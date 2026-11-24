@@ -3,6 +3,7 @@ package com.projet2.microfinance.Controller;
 import com.projet2.microfinance.DTO.EcheancierDTO;
 import com.projet2.microfinance.DTO.PageResponseDTO;
 import com.projet2.microfinance.DTO.PaiementResponseDTO;
+import com.projet2.microfinance.DTO.PenalitesDTO;
 import com.projet2.microfinance.DTO.PretRequestDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
 import com.projet2.microfinance.Service.EcheanceService;
@@ -13,9 +14,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -52,6 +55,13 @@ public class PretController {
     @ResponseStatus(HttpStatus.CREATED)
     public EcheancierDTO genererEcheancier(@PathVariable Long id) {
         return echeanceService.genererEcheancier(id);
+    }
+
+    // F14 - POST /prets/{id}/penalites?date=2026-11-30 : calcule les pénalités de retard à la date, aujourd'hui par défaut (200, 400, 404 ou 409)
+    @PostMapping("/{id}/penalites")
+    public PenalitesDTO penalites(@PathVariable Long id,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return echeanceService.calculerPenalites(id, date != null ? date : LocalDate.now());
     }
 
     // F9 - GET /prets/{id}/paiements : paiements du prêt, du plus récent au plus ancien (200, ou 404)

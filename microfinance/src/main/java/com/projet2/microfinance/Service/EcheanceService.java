@@ -3,6 +3,7 @@ package com.projet2.microfinance.Service;
 import com.projet2.microfinance.DTO.EcheanceRequestDTO;
 import com.projet2.microfinance.DTO.EcheanceResponseDTO;
 import com.projet2.microfinance.DTO.EcheancierDTO;
+import com.projet2.microfinance.DTO.PenalitesDTO;
 import com.projet2.microfinance.Entity.EcheanceEntity;
 import com.projet2.microfinance.Entity.PretEntity;
 import com.projet2.microfinance.Entity.StatutPret;
@@ -17,6 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static com.projet2.microfinance.Service.ServiceUtils.trouverOu404;
@@ -106,6 +109,47 @@ public class EcheanceService {
         BigDecimal facteur = BigDecimal.ONE.add(tauxMensuel).pow(duree, MathContext.DECIMAL64);   // (1 + t)^n
         return montant.multiply(tauxMensuel).multiply(facteur)
                 .divide(facteur.subtract(BigDecimal.ONE), 2, RoundingMode.HALF_UP);
+    }
+
+    // F14 - pénalité par jour de retard : 0,1 % du montant dû
+    private static final BigDecimal TAUX_PENALITE_JOUR = new BigDecimal("0.001");
+
+    // F14 - POST /prets/{id}/penalites?date= : pour chaque échéance impayée à la date, pénalité = dû × 0,1 % × jours de retard ;
+    // elle s'ajoute au dû (jamais diminuée) et sera imputée en premier. 400 si la date est future, 409 si le prêt est soldé
+    @Transactional
+    public PenalitesDTO calculerPenalites(Long pretId, LocalDate date) {
+        PretEntity pret = trouverOu404(pretRepository, pretId, "Prêt");
+        if (date.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date " + date + " est dans le futur");
+        }
+        if (pret.getStatut() == StatutPret.SOLDE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le prêt " + pretId + " est soldé : aucune pénalité");
+        }
+
+        PenalitesDTO dto = new PenalitesDTO();
+        dto.setPretId(pretId);
+        dto.setDate(date);
+        for (EcheanceEntity echeance : pret.getEcheances()) {
+            BigDecimal montantDu = echeance.capitalDu().add(echeance.interetsDus());
+            if (echeance.getDateEcheance().isBefore(date) && montantDu.signum() > 0) {
+                long joursRetard = ChronoUnit.DAYS.between(echeance.getDateEcheance(), date);
+                BigDecimal penalite = montantDu.multiply(TAUX_PENALITE_JOUR)
+                        .multiply(BigDecimal.valueOf(joursRetard))
+                        .setScale(2, RoundingMode.HALF_UP);
+                echeance.setPenalites(echeance.getPenalites().max(penalite));   // recalculer ne double pas la pénalité
+
+                PenalitesDTO.Ligne ligne = new PenalitesDTO.Ligne();
+                ligne.setEcheanceId(echeance.getId());
+                ligne.setNumero(echeance.getNumero());
+                ligne.setDateEcheance(echeance.getDateEcheance());
+                ligne.setMontantDu(montantDu);
+                ligne.setJoursRetard(joursRetard);
+                ligne.setPenalites(echeance.getPenalites());
+                dto.getEcheances().add(ligne);
+            }
+            dto.setTotalPenalites(dto.getTotalPenalites().add(echeance.penalitesDues()));
+        }
+        return dto;
     }
 
     // POST /echeances : saisit une nouvelle échéance (INSERT), rattachée à son prêt
