@@ -3,6 +3,7 @@ package com.projet4.transporturbain.Controller;
 import com.projet4.transporturbain.DTO.CourseRequestDTO;
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
 import com.projet4.transporturbain.DTO.PageResponseDTO;
+import com.projet4.transporturbain.DTO.StatutRequestDTO;
 import com.projet4.transporturbain.Service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,10 +39,16 @@ public class CourseController {
         return courseService.creer(dto);
     }
 
-    // PUT /courses/{id} : modification d'une course, dont son statut (200, 400 ou 404)
+    // PUT /courses/{id} : modification d'une course, hors statut (200, 400, 404 ou 409)
     @PutMapping("/{id}")
     public CourseResponseDTO modifier(@PathVariable Long id, @Valid @RequestBody CourseRequestDTO dto) {
         return courseService.modifier(id, dto);
+    }
+
+    // F15 - POST /courses/{id}/statut : { "statut": "TERMINEE", "heureArriveeReelle": "07:52" } (200, 400, 404 ou 409)
+    @PostMapping("/{id}/statut")
+    public CourseResponseDTO changerStatut(@PathVariable Long id, @Valid @RequestBody StatutRequestDTO dto) {
+        return courseService.changerStatut(id, dto);
     }
 
     // DELETE /courses/{id} : suppression d'une course (204, ou 404)

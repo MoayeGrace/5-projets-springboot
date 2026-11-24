@@ -1,6 +1,5 @@
 package com.projet4.transporturbain.DTO;
 
-import com.projet4.transporturbain.Entity.StatutCourse;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +11,7 @@ import java.time.LocalTime;
 @Getter
 @Setter
 @NoArgsConstructor
+// F15 - pas de statut ici : une course est créée PREVUE et son statut ne change que par POST /courses/{id}/statut
 public class CourseRequestDTO {
 
     @NotNull(message = "La ligne est obligatoire")
@@ -28,7 +28,4 @@ public class CourseRequestDTO {
 
     @NotNull(message = "L'heure de départ est obligatoire")
     private LocalTime heureDepart;
-
-    // Facultatif : PREVUE à la création si absent, inchangé à la modification si absent
-    private StatutCourse statut;
 }

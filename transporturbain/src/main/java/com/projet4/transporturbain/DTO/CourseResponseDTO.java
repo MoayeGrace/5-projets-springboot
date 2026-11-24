@@ -27,4 +27,6 @@ public class CourseResponseDTO {
     private LocalDate dateCourse;
     private LocalTime heureDepart;
     private StatutCourse statut;
+    private LocalTime heureArriveePrevue;   // F15 : départ + durée du trajet
+    private LocalTime heureArriveeReelle;   // F15 : renseignée au passage à TERMINEE
 }

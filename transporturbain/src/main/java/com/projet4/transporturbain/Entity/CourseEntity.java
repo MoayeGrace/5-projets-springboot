@@ -42,6 +42,9 @@ public class CourseEntity {
     @Column(nullable = false, length = 20)
     private StatutCourse statut = StatutCourse.PREVUE;
 
+    // F15 - heure réelle d'arrivée au terminus, enregistrée au passage à TERMINEE (sert au calcul de ponctualité)
+    private LocalTime heureArriveeReelle;
+
     // F12 - date et heure de départ
     public LocalDateTime depart() {
         return dateCourse.atTime(heureDepart);

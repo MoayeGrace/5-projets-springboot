@@ -3,6 +3,7 @@ package com.projet4.transporturbain.Service;
 import com.projet4.transporturbain.DTO.CourseRequestDTO;
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
 import com.projet4.transporturbain.DTO.PageResponseDTO;
+import com.projet4.transporturbain.DTO.StatutRequestDTO;
 import com.projet4.transporturbain.Entity.BusEntity;
 import com.projet4.transporturbain.Entity.ConducteurEntity;
 import com.projet4.transporturbain.Entity.CourseEntity;
@@ -21,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static com.projet4.transporturbain.Service.ServiceUtils.trouverOu404;
@@ -147,7 +149,24 @@ public class CourseService {
         courseRepository.delete(trouverOu404(courseRepository, id, "Course"));
     }
 
-    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; statut absent = inchangé)
+    // F15 - POST /courses/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon) ;
+    // au passage à TERMINEE, l'heure réelle d'arrivée est enregistrée (celle fournie, sinon l'heure actuelle)
+    public CourseResponseDTO changerStatut(Long id, StatutRequestDTO dto) {
+        CourseEntity course = trouverOu404(courseRepository, id, "Course");
+        StatutCourse nouveau = dto.getStatut();
+        if (!course.getStatut().statutsAtteignables().contains(nouveau)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Passage de " + course.getStatut() + " à " + nouveau + " interdit. Statuts atteignables : "
+                            + course.getStatut().statutsAtteignables());
+        }
+        if (nouveau == StatutCourse.TERMINEE) {
+            course.setHeureArriveeReelle(dto.getHeureArriveeReelle() != null ? dto.getHeureArriveeReelle() : LocalTime.now().withNano(0));
+        }
+        course.setStatut(nouveau);
+        return entityVersResponseDTO(courseRepository.save(course));
+    }
+
+    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; le statut ne change pas ici, F15)
     private void dtoVersEntity(CourseRequestDTO dto, CourseEntity course) {
         LigneEntity ligne = trouverOu404(ligneRepository, dto.getLigneId(), "Ligne");
         BusEntity bus = trouverOu404(busRepository, dto.getBusId(), "Bus");
@@ -158,9 +177,6 @@ public class CourseService {
         course.setLigne(ligne);
         course.setBus(bus);
         course.setConducteur(conducteur);
-        if (dto.getStatut() != null) {
-            course.setStatut(dto.getStatut());
-        }
     }
 
     // Entity -> DTO
@@ -176,6 +192,8 @@ public class CourseService {
         dto.setConducteurId(course.getConducteur().getId());
         dto.setConducteurNom(course.getConducteur().getNom());
         dto.setStatut(course.getStatut());
+        dto.setHeureArriveePrevue(course.arriveePrevue().toLocalTime());   // F15
+        dto.setHeureArriveeReelle(course.getHeureArriveeReelle());         // F15
         return dto;
     }
 }
