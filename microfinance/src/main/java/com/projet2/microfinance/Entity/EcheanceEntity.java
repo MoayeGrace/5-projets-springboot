@@ -7,6 +7,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "echeance")
@@ -55,6 +57,10 @@ public class EcheanceEntity {
     @ManyToOne
     @JoinColumn(name = "pret_id", nullable = false)
     private PretEntity pret;
+
+    // F19 - paiements imputés sur cette échéance (pour dater son remboursement)
+    @OneToMany(mappedBy = "echeance")
+    private List<ImputationEntity> imputations = new ArrayList<>();
 
     // Total déjà payé sur cette échéance (pénalités comprises)
     public BigDecimal montantPaye() {

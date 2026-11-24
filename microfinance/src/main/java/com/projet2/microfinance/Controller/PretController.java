@@ -6,6 +6,8 @@ import com.projet2.microfinance.DTO.PaiementResponseDTO;
 import com.projet2.microfinance.DTO.PenalitesDTO;
 import com.projet2.microfinance.DTO.PretRequestDTO;
 import com.projet2.microfinance.DTO.PretResponseDTO;
+import com.projet2.microfinance.DTO.SuiviPretDTO;
+import com.projet2.microfinance.Service.StatistiqueService;
 import com.projet2.microfinance.Service.EcheanceService;
 import com.projet2.microfinance.Service.PaiementService;
 import com.projet2.microfinance.Entity.StatutPret;
@@ -29,6 +31,7 @@ public class PretController {
     private final PretService pretService;
     private final EcheanceService echeanceService;   // F8
     private final PaiementService paiementService;   // F9
+    private final StatistiqueService statistiqueService;   // F19
 
     // F10 - GET /prets?statut=EN_COURS&page=0&size=20 : prêts filtrés par statut, page par page (200, ou 400 si statut inconnu)
     // Pageable : Spring le remplit tout seul à partir de page, size et sort ; @PageableDefault = 1re page de 20 éléments
@@ -62,6 +65,12 @@ public class PretController {
     public PenalitesDTO penalites(@PathVariable Long id,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return echeanceService.calculerPenalites(id, date != null ? date : LocalDate.now());
+    }
+
+    // F19 - GET /prets/{id}/suivi : tableau de suivi ligne par ligne et synthèse du prêt (200, 404, ou 409 sans échéancier)
+    @GetMapping("/{id}/suivi")
+    public SuiviPretDTO suivi(@PathVariable Long id) {
+        return statistiqueService.suiviPret(id);
     }
 
     // F9 - GET /prets/{id}/paiements : paiements du prêt, du plus récent au plus ancien (200, ou 404)
