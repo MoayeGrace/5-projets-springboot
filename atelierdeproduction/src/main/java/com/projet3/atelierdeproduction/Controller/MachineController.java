@@ -2,12 +2,16 @@ package com.projet3.atelierdeproduction.Controller;
 
 import com.projet3.atelierdeproduction.DTO.MachineRequestDTO;
 import com.projet3.atelierdeproduction.DTO.MachineResponseDTO;
+import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
 import com.projet3.atelierdeproduction.Service.MachineService;
+import com.projet3.atelierdeproduction.Service.OrdreFabricationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -16,6 +20,15 @@ import java.util.List;
 public class MachineController {
 
     private final MachineService machineService;
+    private final OrdreFabricationService ordreFabricationService;   // F9
+
+    // F9 - GET /machines/{id}/ordres?du=2026-11-23&au=2026-11-29 : programme de la machine, semaine en cours par défaut (200, 400 ou 404)
+    @GetMapping("/{id}/ordres")
+    public List<OrdreFabricationResponseDTO> ordres(@PathVariable Long id,
+                                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate du,
+                                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate au) {
+        return ordreFabricationService.listerParMachine(id, du, au);
+    }
 
     // GET /machines : parc de machines (200)
     @GetMapping

@@ -12,8 +12,12 @@ import com.projet3.atelierdeproduction.Repository.MachineRepository;
 import com.projet3.atelierdeproduction.Repository.OperateurRepository;
 import com.projet3.atelierdeproduction.Repository.OrdreFabricationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
@@ -33,6 +37,24 @@ public class OrdreFabricationService {
                 ? ordreFabricationRepository.findAllByOrderByDatePrevueAsc()
                 : ordreFabricationRepository.findByStatutOrderByDatePrevueAsc(statut);
         return ordres.stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
+    // F9 - GET /machines/{id}/ordres?du=&au= : programme de la machine sur la période (semaine en cours par défaut),
+    // trié par date prévue ; 404 si la machine n'existe pas, 400 si "du" est après "au"
+    public List<OrdreFabricationResponseDTO> listerParMachine(Long machineId, LocalDate du, LocalDate au) {
+        trouverOu404(machineRepository, machineId, "Machine");
+        LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate debut = (du != null) ? du : lundi;
+        LocalDate fin = (au != null) ? au : lundi.plusDays(6);
+        if (debut.isAfter(fin)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de début doit précéder la date de fin");
+        }
+        return ordreFabricationRepository
+                .findByMachineIdAndDatePrevueGreaterThanEqualAndDatePrevueLessThanOrderByDatePrevueAsc(
+                        machineId, debut.atStartOfDay(), fin.plusDays(1).atStartOfDay())
+                .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
     }
