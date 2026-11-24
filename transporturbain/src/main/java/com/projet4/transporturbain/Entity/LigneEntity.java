@@ -32,6 +32,14 @@ public class LigneEntity {
     @Column(nullable = false, length = 150)
     private String terminusArrivee;
 
+    // F12 - durée d'une course d'un terminus à l'autre, en minutes
+    @Column(nullable = false)
+    private Integer dureeTrajetMinutes = 0;
+
+    // F12 - temps nécessaire au bus pour revenir au terminus et repartir, en minutes
+    @Column(nullable = false)
+    private Integer tempsRetourMinutes = 0;
+
     @OneToMany(mappedBy = "ligne")
     private List<CourseEntity> courses = new ArrayList<>();
 }

@@ -14,4 +14,6 @@ public class LigneResponseDTO {
     private String libelle;
     private String terminusDepart;
     private String terminusArrivee;
+    private Integer dureeTrajetMinutes;   // F12
+    private Integer tempsRetourMinutes;   // F12
 }

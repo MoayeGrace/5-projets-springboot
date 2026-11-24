@@ -55,6 +55,8 @@ public class LigneService {
         ligne.setLibelle(dto.getLibelle());
         ligne.setTerminusDepart(dto.getTerminusDepart());
         ligne.setTerminusArrivee(dto.getTerminusArrivee());
+        ligne.setDureeTrajetMinutes(dto.getDureeTrajetMinutes());                                               // F12
+        ligne.setTempsRetourMinutes(dto.getTempsRetourMinutes() != null ? dto.getTempsRetourMinutes() : 0);    // F12
     }
 
     // Entity -> DTO
@@ -65,6 +67,8 @@ public class LigneService {
         dto.setLibelle(ligne.getLibelle());
         dto.setTerminusDepart(ligne.getTerminusDepart());
         dto.setTerminusArrivee(ligne.getTerminusArrivee());
+        dto.setDureeTrajetMinutes(ligne.getDureeTrajetMinutes());   // F12
+        dto.setTempsRetourMinutes(ligne.getTempsRetourMinutes());   // F12
         return dto;
     }
 }

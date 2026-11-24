@@ -7,6 +7,7 @@ import com.projet4.transporturbain.Entity.BusEntity;
 import com.projet4.transporturbain.Entity.ConducteurEntity;
 import com.projet4.transporturbain.Entity.CourseEntity;
 import com.projet4.transporturbain.Entity.LigneEntity;
+import com.projet4.transporturbain.Entity.StatutCourse;
 import com.projet4.transporturbain.Repository.BusRepository;
 import com.projet4.transporturbain.Repository.ConducteurRepository;
 import com.projet4.transporturbain.Repository.CourseRepository;
@@ -82,6 +83,7 @@ public class CourseService {
     public CourseResponseDTO creer(CourseRequestDTO dto) {
         CourseEntity course = new CourseEntity();
         dtoVersEntity(dto, course);
+        verifierBusLibre(course);   // F12
         return entityVersResponseDTO(courseRepository.save(course));
     }
 
@@ -89,7 +91,24 @@ public class CourseService {
     public CourseResponseDTO modifier(Long id, CourseRequestDTO dto) {
         CourseEntity course = trouverOu404(courseRepository, id, "Course");
         dtoVersEntity(dto, course);
+        verifierBusLibre(course);   // F12 - nouveau bus ou nouvel horaire : le créneau est revérifié
         return entityVersResponseDTO(courseRepository.save(course));
+    }
+
+    // F12 - aucune autre course non annulée du bus ne doit recouvrir le créneau, temps de retour au terminus inclus (409)
+    private void verifierBusLibre(CourseEntity course) {
+        if (course.getStatut() == StatutCourse.ANNULEE) {
+            return;
+        }
+        for (CourseEntity autre : courseRepository.findByBusIdAndStatutNot(course.getBus().getId(), StatutCourse.ANNULEE)) {
+            boolean chevauche = autre.depart().isBefore(course.finOccupationBus())
+                    && autre.finOccupationBus().isAfter(course.depart());
+            if (!autre.getId().equals(course.getId()) && chevauche) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Le bus " + course.getBus().getImmatriculation() + " est déjà pris par la course " + autre.getId()
+                                + " de " + autre.depart() + " à " + autre.finOccupationBus() + " (retour au terminus inclus)");
+            }
+        }
     }
 
     // DELETE /courses/{id} : vérifie que l'élément existe (404 sinon), puis le supprime
