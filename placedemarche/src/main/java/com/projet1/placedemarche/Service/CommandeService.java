@@ -11,6 +11,7 @@ import com.projet1.placedemarche.Repository.ProduitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -48,17 +49,51 @@ public class CommandeService {
                 .toList();
     }
 
-    // POST /commandes : crée une nouvelle commande (INSERT), avec le prix copié depuis le produit
+    // POST /commandes + F11 (stock suffisant) + F12 (stock décrémenté, même transaction, ligne verrouillée) + F15 (prix figé)
+    // @Transactional : si une étape échoue, le stock n'est pas modifié et la commande n'est pas créée
+    @Transactional
     public CommandeResponseDTO creer(CommandeRequestDTO dto) {
+        ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
+        ProduitEntity produit = produitVerrouille(dto.getProduitId());
+
+        reserverStock(produit, dto.getQuantite());
+
         CommandeEntity commande = new CommandeEntity();
-        dtoVersEntity(dto, commande);
+        commande.setClient(client);
+        commande.setProduit(produit);
+        commande.setQuantite(dto.getQuantite());
+        commande.setPrixUnitaire(produit.getPrix());   // F15 - le prix du jour est copié et ne bougera plus
+        if (dto.getStatut() != null) {
+            commande.setStatut(dto.getStatut());
+        }
         return entityVersResponseDTO(commandeRepository.save(commande));
     }
 
-    // PUT /commandes/{id} : charge la commande existante (404 sinon), remplace ses champs, puis UPDATE
+    // PUT /commandes/{id} + F11/F12 : l'ancienne quantité est rendue au stock puis la nouvelle est réservée,
+    // dans la même transaction (si le stock manque, tout est annulé)
+    @Transactional
     public CommandeResponseDTO modifier(Long id, CommandeRequestDTO dto) {
         CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
-        dtoVersEntity(dto, commande);
+        ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
+
+        // F12 - on rend d'abord l'ancienne quantité à l'ancien produit
+        ProduitEntity ancienProduit = produitVerrouille(commande.getProduit().getId());
+        ancienProduit.modifierStock(ancienProduit.getStock() + commande.getQuantite());
+
+        // F11 + F12 - puis on réserve la nouvelle quantité sur le (nouveau) produit
+        ProduitEntity nouveauProduit = produitVerrouille(dto.getProduitId());
+        reserverStock(nouveauProduit, dto.getQuantite());
+
+        // F15 - le prix n'est recopié que si le produit change, sinon il reste figé
+        if (!ancienProduit.getId().equals(nouveauProduit.getId())) {
+            commande.setPrixUnitaire(nouveauProduit.getPrix());
+        }
+        commande.setClient(client);
+        commande.setProduit(nouveauProduit);
+        commande.setQuantite(dto.getQuantite());
+        if (dto.getStatut() != null) {
+            commande.setStatut(dto.getStatut());
+        }
         return entityVersResponseDTO(commandeRepository.save(commande));
     }
 
@@ -67,31 +102,16 @@ public class CommandeService {
         commandeRepository.delete(trouverOu404(commandeRepository, id, "Commande"));
     }
 
-    // DTO -> Entity
-    private void dtoVersEntity(CommandeRequestDTO dto, CommandeEntity commande) {
-        ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
-        ProduitEntity produit = trouverOu404(produitRepository, dto.getProduitId(), "Produit");
-        verifierStock(produit, dto.getQuantite());   // F11 - la quantité commandée ne doit pas dépasser le stock
+    // ---------- Méthodes privées ----------
 
-        // F15 : prix copié seulement pour une nouvelle commande ou un changement de produit, sinon il reste figé
-        boolean produitChange = commande.getProduit() == null
-                || !commande.getProduit().getId().equals(produit.getId());
-        if (produitChange) {
-            commande.setPrixUnitaire(produit.getPrix());
-        }
-
-        commande.setClient(client);
-        commande.setProduit(produit);
-        commande.setQuantite(dto.getQuantite());
-
-        // Statut facultatif : si absent, on garde l'actuel (EN_ATTENTE pour une nouvelle commande)
-        if (dto.getStatut() != null) {
-            commande.setStatut(dto.getStatut());
-        }
+    // F12 - charge le produit en verrouillant sa ligne jusqu'à la fin de la transaction (404 s'il n'existe pas)
+    private ProduitEntity produitVerrouille(Long produitId) {
+        return produitRepository.findByIdAvecVerrou(produitId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produit " + produitId + " introuvable"));
     }
 
-    // F11 - refuse la commande si le produit est en rupture ou si la quantité dépasse le stock (409 avec le stock restant)
-    private void verifierStock(ProduitEntity produit, int quantite) {
+    // F11 - refuse si la quantité dépasse le stock (409 avec le stock restant) ; F12 - sinon décrémente le stock
+    private void reserverStock(ProduitEntity produit, int quantite) {
         if (produit.getStock() == 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Le produit « " + produit.getNom() + " » est en rupture de stock");
@@ -100,6 +120,7 @@ public class CommandeService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Stock insuffisant pour « " + produit.getNom() + " » : " + produit.getStock() + " restant(s), " + quantite + " demandé(s)");
         }
+        produit.modifierStock(produit.getStock() - quantite);
     }
 
     // Entity -> DTO (le montant = prix unitaire x quantité est calculé ici)

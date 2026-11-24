@@ -45,4 +45,15 @@ public class ProduitEntity {
 
     @OneToMany(mappedBy = "produit")
     private List<CommandeEntity> commandes = new ArrayList<>();
+
+    // F16 - seuil sous lequel un produit est signalé en stock faible
+    public static final int SEUIL_STOCK_FAIBLE = 5;
+
+    // F12 / F14 / F16 - change le stock ; s'il remonte au-dessus du seuil (réapprovisionnement), le produit pourra être re-signalé
+    public void modifierStock(int nouveauStock) {
+        this.stock = nouveauStock;
+        if (nouveauStock > SEUIL_STOCK_FAIBLE) {
+            this.alerteStockEnvoyee = false;
+        }
+    }
 }

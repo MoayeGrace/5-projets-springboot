@@ -36,7 +36,7 @@ public class CommandeController {
         return commandeService.creer(dto);
     }
 
-    // PUT /commandes/{id} : modification d'une commande (200, 400 ou 404)
+    // PUT /commandes/{id} : modification d'une commande (200 ; 400 ; 404 ; 409 stock insuffisant - F11)
     @PutMapping("/{id}")
     public CommandeResponseDTO modifier(@PathVariable Long id, @Valid @RequestBody CommandeRequestDTO dto) {
         return commandeService.modifier(id, dto);
