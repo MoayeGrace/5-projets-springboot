@@ -83,7 +83,8 @@ public class CourseService {
     public CourseResponseDTO creer(CourseRequestDTO dto) {
         CourseEntity course = new CourseEntity();
         dtoVersEntity(dto, course);
-        verifierBusLibre(course);   // F12
+        verifierBusLibre(course);          // F12
+        verifierConducteurLibre(course);   // F13
         return entityVersResponseDTO(courseRepository.save(course));
     }
 
@@ -91,8 +92,26 @@ public class CourseService {
     public CourseResponseDTO modifier(Long id, CourseRequestDTO dto) {
         CourseEntity course = trouverOu404(courseRepository, id, "Course");
         dtoVersEntity(dto, course);
-        verifierBusLibre(course);   // F12 - nouveau bus ou nouvel horaire : le créneau est revérifié
+        verifierBusLibre(course);          // F12 - nouveau bus ou nouvel horaire : le créneau est revérifié
+        verifierConducteurLibre(course);   // F13 - nouveau conducteur ou nouvel horaire : idem
         return entityVersResponseDTO(courseRepository.save(course));
+    }
+
+    // F13 - aucune autre course non annulée du conducteur ne doit recouvrir le créneau départ -> arrivée (409) ;
+    // vérification indépendante de celle du bus
+    private void verifierConducteurLibre(CourseEntity course) {
+        if (course.getStatut() == StatutCourse.ANNULEE) {
+            return;
+        }
+        for (CourseEntity autre : courseRepository.findByConducteurIdAndStatutNot(course.getConducteur().getId(), StatutCourse.ANNULEE)) {
+            boolean chevauche = autre.depart().isBefore(course.arriveePrevue())
+                    && autre.arriveePrevue().isAfter(course.depart());
+            if (!autre.getId().equals(course.getId()) && chevauche) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Le conducteur " + course.getConducteur().getNom() + " assure déjà la course " + autre.getId()
+                                + " de " + autre.depart() + " à " + autre.arriveePrevue());
+            }
+        }
     }
 
     // F12 - aucune autre course non annulée du bus ne doit recouvrir le créneau, temps de retour au terminus inclus (409)
