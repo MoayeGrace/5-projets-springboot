@@ -1,5 +1,6 @@
 package com.projet1.placedemarche.Service;
 
+import com.projet1.placedemarche.DTO.PageResponseDTO;
 import com.projet1.placedemarche.DTO.ProduitRequestDTO;
 import com.projet1.placedemarche.DTO.ProduitResponseDTO;
 import com.projet1.placedemarche.Entity.CategorieEntity;
@@ -9,6 +10,8 @@ import com.projet1.placedemarche.Repository.CategorieRepository;
 import com.projet1.placedemarche.Repository.ProduitRepository;
 import com.projet1.placedemarche.Repository.VendeurRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,17 +29,25 @@ public class ProduitService {
     private final VendeurRepository vendeurRepository;
     private final CategorieRepository categorieRepository;
 
-    // F9 - GET /produits?nom=&prixMin=&prixMax= : recherche par critères facultatifs (sans critère = tous les produits)
-    public List<ProduitResponseDTO> rechercher(String nom, BigDecimal prixMin, BigDecimal prixMax) {
+    // F10 - taille de page maximale autorisée
+    private static final int TAILLE_PAGE_MAX = 100;
+
+    // F9 + F10 - GET /produits?nom=&prixMin=&prixMax=&page=&size=&sort= : recherche par critères facultatifs, page par page
+    public PageResponseDTO<ProduitResponseDTO> rechercher(String nom, BigDecimal prixMin, BigDecimal prixMax, Pageable pageable) {
         if (prixMin != null && prixMax != null && prixMin.compareTo(prixMax) > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Le prix minimum ne peut pas être supérieur au prix maximum");
         }
         String nomCherche = (nom == null || nom.isBlank()) ? null : nom.trim();
-        return produitRepository.rechercher(nomCherche, prixMin, prixMax)
-                .stream()
-                .map(this::entityVersResponseDTO)
-                .toList();
+
+        // F10 - "une taille supérieure à 100 est ramenée à 100" (on garde le numéro de page et le tri demandés)
+        if (pageable.getPageSize() > TAILLE_PAGE_MAX) {
+            pageable = PageRequest.of(pageable.getPageNumber(), TAILLE_PAGE_MAX, pageable.getSort());
+        }
+
+        // F10 - map() convertit chaque entité de la page en DTO, en conservant les infos de pagination
+        return new PageResponseDTO<>(produitRepository.rechercher(nomCherche, prixMin, prixMax, pageable)
+                .map(this::entityVersResponseDTO));
     }
 
     // GET /produits/{id} : récupère un produit par son id (404 s'il n'existe pas)

@@ -1,10 +1,13 @@
 package com.projet1.placedemarche.Controller;
 
+import com.projet1.placedemarche.DTO.PageResponseDTO;
 import com.projet1.placedemarche.DTO.ProduitRequestDTO;
 import com.projet1.placedemarche.DTO.ProduitResponseDTO;
 import com.projet1.placedemarche.Service.ProduitService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,12 +21,14 @@ public class ProduitController {
 
     private final ProduitService produitService;
 
-    // F9 - GET /produits?nom=casque&prixMin=5000&prixMax=50000 : recherche, critères facultatifs (200, ou 400)
+    // F9 + F10 - GET /produits?nom=casque&prixMin=5000&prixMax=50000&page=0&size=20&sort=prix,asc (200, ou 400)
+    // Pageable : Spring le remplit tout seul à partir de page, size et sort ; @PageableDefault = 1re page de 20 éléments
     @GetMapping
-    public List<ProduitResponseDTO> rechercher(@RequestParam(required = false) String nom,
-                                               @RequestParam(required = false) BigDecimal prixMin,
-                                               @RequestParam(required = false) BigDecimal prixMax) {
-        return produitService.rechercher(nom, prixMin, prixMax);
+    public PageResponseDTO<ProduitResponseDTO> rechercher(@RequestParam(required = false) String nom,
+                                                          @RequestParam(required = false) BigDecimal prixMin,
+                                                          @RequestParam(required = false) BigDecimal prixMax,
+                                                          @PageableDefault(size = 20) Pageable pageable) {
+        return produitService.rechercher(nom, prixMin, prixMax, pageable);
     }
 
     // GET /produits/{id} : détail d'un produit (200, ou 404)
