@@ -33,6 +33,15 @@ public class CompteService {
         return entityVersResponseDTO(trouverOu404(compteRepository, id, "Compte"));
     }
 
+    // F6 - GET /clients/{id}/comptes : comptes d'un client triés par date d'ouverture (404 si le client n'existe pas)
+    public List<CompteResponseDTO> listerParClient(Long clientId) {
+        trouverOu404(clientRepository, clientId, "Client");
+        return compteRepository.findByClientIdOrderByDateOuvertureAsc(clientId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /comptes : ouvre un nouveau compte (INSERT), rattaché à son client
     public CompteResponseDTO creer(CompteRequestDTO dto) {
         CompteEntity compte = new CompteEntity();
