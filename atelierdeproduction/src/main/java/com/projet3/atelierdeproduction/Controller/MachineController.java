@@ -2,7 +2,11 @@ package com.projet3.atelierdeproduction.Controller;
 
 import com.projet3.atelierdeproduction.DTO.MachineRequestDTO;
 import com.projet3.atelierdeproduction.DTO.MachineResponseDTO;
+import com.projet3.atelierdeproduction.DTO.ChargeMachineDTO;
+import com.projet3.atelierdeproduction.DTO.MaintenanceRequestDTO;
+import com.projet3.atelierdeproduction.DTO.MaintenanceResponseDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
+import com.projet3.atelierdeproduction.Service.ChargeMachineService;
 import com.projet3.atelierdeproduction.Service.MachineService;
 import com.projet3.atelierdeproduction.Service.OrdreFabricationService;
 import jakarta.validation.Valid;
@@ -21,6 +25,28 @@ public class MachineController {
 
     private final MachineService machineService;
     private final OrdreFabricationService ordreFabricationService;   // F9
+    private final ChargeMachineService chargeMachineService;         // F19
+
+    // F19 - GET /machines/{id}/charge?du=2026-11-23&au=2026-11-27 : taux d'utilisation, nombre d'ordres, détail par jour (200, 400 ou 404)
+    @GetMapping("/{id}/charge")
+    public ChargeMachineDTO charge(@PathVariable Long id,
+                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate du,
+                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate au) {
+        return chargeMachineService.charge(id, du, au);
+    }
+
+    // F19 - POST /machines/{id}/maintenances : enregistre un arrêt de maintenance (201, 400 ou 404)
+    @PostMapping("/{id}/maintenances")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MaintenanceResponseDTO ajouterMaintenance(@PathVariable Long id, @Valid @RequestBody MaintenanceRequestDTO dto) {
+        return chargeMachineService.ajouterMaintenance(id, dto);
+    }
+
+    // F19 - GET /machines/{id}/maintenances : arrêts de maintenance de la machine (200, ou 404)
+    @GetMapping("/{id}/maintenances")
+    public List<MaintenanceResponseDTO> maintenances(@PathVariable Long id) {
+        return chargeMachineService.maintenances(id);
+    }
 
     // F9 - GET /machines/{id}/ordres?du=2026-11-23&au=2026-11-29 : programme de la machine, semaine en cours par défaut (200, 400 ou 404)
     @GetMapping("/{id}/ordres")
