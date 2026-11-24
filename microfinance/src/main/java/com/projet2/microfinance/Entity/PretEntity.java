@@ -41,6 +41,10 @@ public class PretEntity {
     // F15 - date à laquelle le prêt a été entièrement remboursé
     private LocalDate dateSolde;
 
+    // F16 - plus grand nombre de jours de retard constaté sur ce prêt
+    @Column(nullable = false)
+    private Integer joursRetardMax = 0;
+
     // Agent de crédit qui suit le dossier
     @Column(nullable = false, length = 100)
     private String agent;

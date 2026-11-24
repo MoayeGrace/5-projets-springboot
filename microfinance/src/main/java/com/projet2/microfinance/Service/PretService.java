@@ -140,6 +140,7 @@ public class PretService {
         dto.setCapitalRestantDu(pret.capitalRestantDu());           // F7
         dto.setSolde(pret.getStatut() == StatutPret.SOLDE);         // F7
         dto.setDateSolde(pret.getDateSolde());                      // F15
+        dto.setJoursRetardMax(pret.getJoursRetardMax());            // F16
         dto.setClientId(pret.getClient().getId());
         dto.setClientNom(pret.getClient().getNom());
         return dto;
