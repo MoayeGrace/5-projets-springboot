@@ -11,4 +11,7 @@ public interface LigneNomenclatureRepository extends JpaRepository<LigneNomencla
 
     // F6 : composants directs d'un article, triés par référence du composant
     List<LigneNomenclatureEntity> findByComposeIdOrderByComposantReferenceAsc(Long composeId);
+
+    // F7 : lignes où l'article apparaît comme composant, triées par référence du composé
+    List<LigneNomenclatureEntity> findByComposantIdOrderByComposeReferenceAsc(Long composantId);
 }

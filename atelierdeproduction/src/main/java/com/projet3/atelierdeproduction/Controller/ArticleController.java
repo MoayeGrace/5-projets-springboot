@@ -38,6 +38,12 @@ public class ArticleController {
         return ligneNomenclatureService.composantsDirects(id);
     }
 
+    // F7 - GET /articles/{id}/utilisations : articles dont la nomenclature contient ce composant (200, ou 404)
+    @GetMapping("/{id}/utilisations")
+    public List<LigneNomenclatureResponseDTO> utilisations(@PathVariable Long id) {
+        return ligneNomenclatureService.utilisations(id);
+    }
+
     // POST /articles : création d'un article (201, ou 400 si le JSON est invalide)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

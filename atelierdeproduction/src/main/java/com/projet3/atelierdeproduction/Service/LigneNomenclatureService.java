@@ -45,6 +45,15 @@ public class LigneNomenclatureService {
                 .toList();
     }
 
+    // F7 - GET /articles/{id}/utilisations : articles qui consomment ce composant, avec la quantité par unité produite
+    public List<LigneNomenclatureResponseDTO> utilisations(Long articleId) {
+        trouverOu404(articleRepository, articleId, "Article");
+        return ligneNomenclatureRepository.findByComposantIdOrderByComposeReferenceAsc(articleId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /nomenclatures : saisit une nouvelle ligne (INSERT) : composé, composant et quantité
     public LigneNomenclatureResponseDTO creer(LigneNomenclatureRequestDTO dto) {
         LigneNomenclatureEntity ligne = new LigneNomenclatureEntity();
