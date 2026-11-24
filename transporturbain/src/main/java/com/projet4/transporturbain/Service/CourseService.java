@@ -13,6 +13,7 @@ import com.projet4.transporturbain.Repository.LigneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static com.projet4.transporturbain.Service.ServiceUtils.trouverOu404;
@@ -29,6 +30,16 @@ public class CourseService {
     // GET /courses : récupère toutes les courses
     public List<CourseResponseDTO> lister() {
         return courseRepository.findAll()
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
+    // F7 - GET /lignes/{id}/courses?date= : courses de la ligne ce jour-là (aujourd'hui par défaut), par heure de départ
+    public List<CourseResponseDTO> listerParLigne(Long ligneId, LocalDate date) {
+        trouverOu404(ligneRepository, ligneId, "Ligne");
+        LocalDate jour = (date != null) ? date : LocalDate.now();
+        return courseRepository.findByLigneIdAndDateCourseOrderByHeureDepartAsc(ligneId, jour)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
