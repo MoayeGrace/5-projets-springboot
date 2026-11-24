@@ -45,6 +45,15 @@ public class ProduitService {
                 .toList();
     }
 
+    // F7 - GET /categories/{id}/produits : produits d'une catégorie triés par prix croissant (404 si la catégorie n'existe pas)
+    public List<ProduitResponseDTO> listerParCategorie(Long categorieId) {
+        trouverOu404(categorieRepository, categorieId, "Catégorie");
+        return produitRepository.findByCategorieIdOrderByPrixAsc(categorieId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /produits : crée un nouveau produit (INSERT), rattaché à son vendeur et à sa catégorie
     public ProduitResponseDTO creer(ProduitRequestDTO dto) {
         ProduitEntity produit = new ProduitEntity();
@@ -85,6 +94,7 @@ public class ProduitService {
         dto.setDescription(produit.getDescription());
         dto.setPrix(produit.getPrix());
         dto.setStock(produit.getStock());
+        dto.setEnRupture(produit.getStock() == 0);
         dto.setVendeurId(produit.getVendeur().getId());
         dto.setVendeurRaisonSociale(produit.getVendeur().getRaisonSociale());
         dto.setCategorieId(produit.getCategorie().getId());

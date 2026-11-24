@@ -2,7 +2,9 @@ package com.projet1.placedemarche.Controller;
 
 import com.projet1.placedemarche.DTO.CategorieRequestDTO;
 import com.projet1.placedemarche.DTO.CategorieResponseDTO;
+import com.projet1.placedemarche.DTO.ProduitResponseDTO;
 import com.projet1.placedemarche.Service.CategorieService;
+import com.projet1.placedemarche.Service.ProduitService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import java.util.List;
 public class CategorieController {
 
     private final CategorieService categorieService;
+    private final ProduitService produitService;
 
     // GET /categories : liste de toutes les catégories (200)
     @GetMapping
@@ -47,5 +50,11 @@ public class CategorieController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void supprimer(@PathVariable Long id) {
         categorieService.supprimer(id);
+    }
+
+    // F7 - GET /categories/{id}/produits : produits de la catégorie triés par prix, ruptures signalées (200, ou 404)
+    @GetMapping("/{id}/produits")
+    public List<ProduitResponseDTO> produits(@PathVariable Long id) {
+        return produitService.listerParCategorie(id);
     }
 }

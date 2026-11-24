@@ -16,6 +16,7 @@ public class ProduitResponseDTO {
     private String description;
     private BigDecimal prix;
     private Integer stock;
+    private boolean enRupture;   // F7 : true si le stock est à 0
 
     private Long vendeurId;
     private String vendeurRaisonSociale;

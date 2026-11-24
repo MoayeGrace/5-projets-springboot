@@ -11,4 +11,7 @@ public interface ProduitRepository extends JpaRepository<ProduitEntity, Long> {
 
     // F6 : les produits d'un vendeur, triés par nom (SQL généré à partir du nom de la méthode)
     List<ProduitEntity> findByVendeurIdOrderByNomAsc(Long vendeurId);
+
+    // F7 : les produits d'une catégorie, triés par prix croissant
+    List<ProduitEntity> findByCategorieIdOrderByPrixAsc(Long categorieId);
 }
