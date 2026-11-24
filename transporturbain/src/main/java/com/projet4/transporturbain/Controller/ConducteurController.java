@@ -2,12 +2,16 @@ package com.projet4.transporturbain.Controller;
 
 import com.projet4.transporturbain.DTO.ConducteurRequestDTO;
 import com.projet4.transporturbain.DTO.ConducteurResponseDTO;
+import com.projet4.transporturbain.DTO.CourseResponseDTO;
 import com.projet4.transporturbain.Service.ConducteurService;
+import com.projet4.transporturbain.Service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -16,6 +20,15 @@ import java.util.List;
 public class ConducteurController {
 
     private final ConducteurService conducteurService;
+    private final CourseService courseService;   // F8
+
+    // F8 - GET /conducteurs/{id}/courses?du=2026-11-23&au=2026-11-29 : programme du conducteur (200, 400 ou 404)
+    @GetMapping("/{id}/courses")
+    public List<CourseResponseDTO> courses(@PathVariable Long id,
+                                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate du,
+                                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate au) {
+        return courseService.listerParConducteur(id, du, au);
+    }
 
     // GET /conducteurs : effectif des conducteurs (200)
     @GetMapping

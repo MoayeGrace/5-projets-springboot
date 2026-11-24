@@ -11,8 +11,11 @@ import com.projet4.transporturbain.Repository.ConducteurRepository;
 import com.projet4.transporturbain.Repository.CourseRepository;
 import com.projet4.transporturbain.Repository.LigneRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -40,6 +43,25 @@ public class CourseService {
         trouverOu404(ligneRepository, ligneId, "Ligne");
         LocalDate jour = (date != null) ? date : LocalDate.now();
         return courseRepository.findByLigneIdAndDateCourseOrderByHeureDepartAsc(ligneId, jour)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
+    // F8 - GET /conducteurs/{id}/courses?du=&au= : programme du conducteur (semaine en cours par défaut),
+    // trié par date puis heure ; 400 si la période dépasse trois mois ou si "du" est après "au"
+    public List<CourseResponseDTO> listerParConducteur(Long conducteurId, LocalDate du, LocalDate au) {
+        trouverOu404(conducteurRepository, conducteurId, "Conducteur");
+        LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate debut = (du != null) ? du : lundi;
+        LocalDate fin = (au != null) ? au : lundi.plusDays(6);
+        if (debut.isAfter(fin)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de début doit précéder la date de fin");
+        }
+        if (fin.isAfter(debut.plusMonths(3))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La période demandée ne peut pas dépasser trois mois");
+        }
+        return courseRepository.findByConducteurIdAndDateCourseBetweenOrderByDateCourseAscHeureDepartAsc(conducteurId, debut, fin)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
