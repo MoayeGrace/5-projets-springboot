@@ -18,6 +18,7 @@ public class EcheanceResponseDTO {
     private BigDecimal montantCapital;
     private BigDecimal montantInterets;
     private BigDecimal montantTotal;
+    private BigDecimal penalites;   // F13 / F14 : pénalités de retard ajoutées au dû
     private BigDecimal montantPaye;
     private BigDecimal resteAPayer;
 

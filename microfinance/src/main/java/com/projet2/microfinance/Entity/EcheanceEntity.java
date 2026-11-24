@@ -44,17 +44,40 @@ public class EcheanceEntity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal interetsPayes = BigDecimal.ZERO;
 
+    // F13 / F14 - pénalités de retard dues sur cette échéance (calculées par F14)
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal penalites = BigDecimal.ZERO;
+
+    // F13 - part des pénalités déjà remboursée
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal penalitesPayees = BigDecimal.ZERO;
+
     @ManyToOne
     @JoinColumn(name = "pret_id", nullable = false)
     private PretEntity pret;
 
-    // Total déjà payé sur cette échéance
+    // Total déjà payé sur cette échéance (pénalités comprises)
     public BigDecimal montantPaye() {
-        return capitalPaye.add(interetsPayes);
+        return capitalPaye.add(interetsPayes).add(penalitesPayees);
     }
 
-    // Ce qu'il reste à payer sur cette échéance
+    // Ce qu'il reste à payer sur cette échéance : capital + intérêts + pénalités, moins ce qui est déjà payé
     public BigDecimal resteAPayer() {
-        return montantTotal.subtract(montantPaye());
+        return montantTotal.add(penalites).subtract(montantPaye());
+    }
+
+    // F13 - pénalités restant dues
+    public BigDecimal penalitesDues() {
+        return penalites.subtract(penalitesPayees);
+    }
+
+    // F13 - intérêts restant dus
+    public BigDecimal interetsDus() {
+        return montantInterets.subtract(interetsPayes);
+    }
+
+    // F13 - capital restant dû
+    public BigDecimal capitalDu() {
+        return montantCapital.subtract(capitalPaye);
     }
 }

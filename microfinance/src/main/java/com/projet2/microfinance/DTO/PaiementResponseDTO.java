@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,4 +20,6 @@ public class PaiementResponseDTO {
     private ModeReglement modeReglement;
 
     private Long pretId;
+
+    private List<ImputationDTO> imputations;   // F13 : détail de l'imputation retenue, échéance par échéance
 }

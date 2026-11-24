@@ -148,6 +148,7 @@ public class EcheanceService {
         dto.setMontantCapital(echeance.getMontantCapital());
         dto.setMontantInterets(echeance.getMontantInterets());
         dto.setMontantTotal(echeance.getMontantTotal());
+        dto.setPenalites(echeance.getPenalites());   // F13
         dto.setMontantPaye(echeance.montantPaye());
         dto.setResteAPayer(echeance.resteAPayer());
         dto.setPretId(echeance.getPret().getId());

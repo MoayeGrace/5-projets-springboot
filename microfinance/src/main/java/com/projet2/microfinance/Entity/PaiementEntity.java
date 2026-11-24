@@ -7,6 +7,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "paiement")
@@ -32,4 +34,8 @@ public class PaiementEntity {
     @ManyToOne
     @JoinColumn(name = "pret_id", nullable = false)
     private PretEntity pret;
+
+    // F13 - détail de l'imputation ; cascade ALL : enregistré et supprimé avec le paiement
+    @OneToMany(mappedBy = "paiement", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ImputationEntity> imputations = new ArrayList<>();
 }
