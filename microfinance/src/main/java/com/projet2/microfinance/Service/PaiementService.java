@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static com.projet2.microfinance.Service.ServiceUtils.trouverOu404;
@@ -89,7 +90,16 @@ public class PaiementService {
             paiement.getImputations().add(imputation);
         }
 
+        cloturerSiSolde(pret, paiement.getDatePaiement());   // F15
         return entityVersResponseDTO(paiementRepository.save(paiement));
+    }
+
+    // F15 - à la fin de chaque imputation : si tout est remboursé, le prêt passe SOLDE et la date de solde est enregistrée
+    private void cloturerSiSolde(PretEntity pret, LocalDate datePaiement) {
+        if (pret.estEntierementRembourse()) {
+            pret.setStatut(StatutPret.SOLDE);
+            pret.setDateSolde(datePaiement);
+        }
     }
 
     // F13 - refuse un paiement sur un prêt soldé, sans échéancier, ou supérieur à ce qui reste dû (409)
@@ -131,6 +141,12 @@ public class PaiementService {
             echeance.setPenalitesPayees(echeance.getPenalitesPayees().subtract(imputation.getPenalites()));
             echeance.setInteretsPayes(echeance.getInteretsPayes().subtract(imputation.getInterets()));
             echeance.setCapitalPaye(echeance.getCapitalPaye().subtract(imputation.getCapital()));
+        }
+        // F15 - un prêt soldé qui redevient dû repasse EN_COURS
+        PretEntity pret = paiement.getPret();
+        if (pret.getStatut() == StatutPret.SOLDE && !pret.estEntierementRembourse()) {
+            pret.setStatut(StatutPret.EN_COURS);
+            pret.setDateSolde(null);
         }
         paiementRepository.delete(paiement);
     }

@@ -38,6 +38,9 @@ public class PretEntity {
     @Column(nullable = false, length = 20)
     private StatutPret statut = StatutPret.ACCORDE;
 
+    // F15 - date à laquelle le prêt a été entièrement remboursé
+    private LocalDate dateSolde;
+
     // Agent de crédit qui suit le dossier
     @Column(nullable = false, length = 100)
     private String agent;
@@ -52,6 +55,11 @@ public class PretEntity {
 
     @OneToMany(mappedBy = "pret")
     private List<PaiementEntity> paiements = new ArrayList<>();
+
+    // F15 - vrai quand capital, intérêts et pénalités de toutes les échéances sont remboursés
+    public boolean estEntierementRembourse() {
+        return !echeances.isEmpty() && echeances.stream().allMatch(e -> e.resteAPayer().signum() == 0);
+    }
 
     // F7 - capital restant dû : 0 si soldé, le montant entier si l'échéancier n'existe pas encore, sinon la somme du capital non remboursé
     public BigDecimal capitalRestantDu() {
