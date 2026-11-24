@@ -49,6 +49,9 @@ public class CommandeEntity {
     @Column(nullable = false)
     private LocalDateTime dateModification;
 
+    // F17 - date du passage à LIVREE : sert à calculer le chiffre d'affaires du mois de livraison
+    private LocalDateTime dateLivraison;
+
     // F13 - historique des changements de statut ; cascade ALL : enregistré et supprimé avec la commande
     @OneToMany(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("dateChangement ASC")

@@ -28,4 +28,5 @@ public class CommandeResponseDTO {
     private StatutCommande statut;
     private LocalDateTime dateCommande;
     private LocalDateTime dateModification;
+    private LocalDateTime dateLivraison;   // F17 - remplie au passage à LIVREE
 }

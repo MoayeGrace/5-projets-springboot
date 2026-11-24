@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.projet1.placedemarche.Service.ServiceUtils.trouverOu404;
@@ -178,7 +179,7 @@ public class CommandeService {
         }
     }
 
-    // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement)
+    // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement) ; F17 - date de livraison
     private void appliquerStatut(CommandeEntity commande, StatutCommande nouveauStatut) {
         HistoriqueStatutEntity ligne = new HistoriqueStatutEntity();
         ligne.setCommande(commande);
@@ -187,6 +188,9 @@ public class CommandeService {
         commande.getHistorique().add(ligne);   // enregistré avec la commande grâce à la cascade
 
         commande.setStatut(nouveauStatut);
+        if (nouveauStatut == StatutCommande.LIVREE) {
+            commande.setDateLivraison(LocalDateTime.now());
+        }
     }
 
     // Entity -> DTO (le montant = prix unitaire x quantité est calculé ici)
@@ -203,6 +207,7 @@ public class CommandeService {
         dto.setStatut(commande.getStatut());
         dto.setDateCommande(commande.getDateCommande());
         dto.setDateModification(commande.getDateModification());
+        dto.setDateLivraison(commande.getDateLivraison());
         return dto;
     }
 }
