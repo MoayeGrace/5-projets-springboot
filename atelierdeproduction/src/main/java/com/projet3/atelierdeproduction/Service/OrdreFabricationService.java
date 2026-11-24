@@ -206,6 +206,7 @@ public class OrdreFabricationService {
         dto.setMachineCode(ordre.getMachine().getCode());
         dto.setOperateurId(ordre.getOperateur().getId());
         dto.setOperateurNom(ordre.getOperateur().getNom());
+        dto.setRetardJours(ordre.getRetardJours());     // F16
         if (ordre.getVersionNomenclature() != null) {   // F15
             dto.setVersionNomenclature(ordre.getVersionNomenclature().getNumero());
         }

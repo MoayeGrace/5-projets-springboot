@@ -50,6 +50,10 @@ public class OrdreFabricationEntity {
     @OrderBy("dateChangement ASC")
     private List<HistoriqueStatutEntity> historique = new ArrayList<>();
 
+    // F16 - retard cumulé en jours, mis à jour chaque nuit par la détection des ordres en retard
+    @Column(nullable = false)
+    private Integer retardJours = 0;
+
     // F15 - version de nomenclature en vigueur au lancement : l'ordre y reste rattaché même si la nomenclature change
     @ManyToOne
     @JoinColumn(name = "version_nomenclature_id")

@@ -17,6 +17,9 @@ public interface OrdreFabricationRepository extends JpaRepository<OrdreFabricati
     // F8 : les ordres d'un statut donné, triés par date prévue
     List<OrdreFabricationEntity> findByStatutOrderByDatePrevueAsc(StatutOrdre statut);
 
+    // F16 : ordres dont la date prévue est passée et dont le statut fait partie de la liste (ex : PLANIFIE, LANCE)
+    List<OrdreFabricationEntity> findByDatePrevueBeforeAndStatutInOrderByDatePrevueAsc(LocalDateTime date, List<StatutOrdre> statuts);
+
     // F12 : les ordres d'une machine qui n'ont pas un statut donné (ex : hors annulés)
     List<OrdreFabricationEntity> findByMachineIdAndStatutNot(Long machineId, StatutOrdre statut);
 
