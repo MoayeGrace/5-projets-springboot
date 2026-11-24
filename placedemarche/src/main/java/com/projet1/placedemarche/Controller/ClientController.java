@@ -2,7 +2,9 @@ package com.projet1.placedemarche.Controller;
 
 import com.projet1.placedemarche.DTO.ClientRequestDTO;
 import com.projet1.placedemarche.DTO.ClientResponseDTO;
+import com.projet1.placedemarche.DTO.CommandeResponseDTO;
 import com.projet1.placedemarche.Service.ClientService;
+import com.projet1.placedemarche.Service.CommandeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,13 @@ import java.util.List;
 public class ClientController {
 
     private final ClientService clientService;
+    private final CommandeService commandeService;
+
+    // F8 - GET /clients/{id}/commandes : historique des commandes du client, plus récentes d'abord (200, ou 404)
+    @GetMapping("/{id}/commandes")
+    public List<CommandeResponseDTO> commandes(@PathVariable Long id) {
+        return commandeService.listerParClient(id);
+    }
 
     // GET /clients : liste de tous les clients (200)
     @GetMapping

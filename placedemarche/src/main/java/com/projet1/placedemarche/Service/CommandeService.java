@@ -37,6 +37,15 @@ public class CommandeService {
         return entityVersResponseDTO(trouverOu404(commandeRepository, id, "Commande"));
     }
 
+    // F8 - GET /clients/{id}/commandes : historique d'un client, du plus récent au plus ancien (404 si le client n'existe pas)
+    public List<CommandeResponseDTO> listerParClient(Long clientId) {
+        trouverOu404(clientRepository, clientId, "Client");
+        return commandeRepository.findByClientIdOrderByDateCommandeDesc(clientId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
+    }
+
     // POST /commandes : crée une nouvelle commande (INSERT), avec le prix copié depuis le produit
     public CommandeResponseDTO creer(CommandeRequestDTO dto) {
         CommandeEntity commande = new CommandeEntity();
