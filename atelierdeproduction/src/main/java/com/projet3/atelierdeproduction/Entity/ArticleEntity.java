@@ -33,6 +33,10 @@ public class ArticleEntity {
     @Column(nullable = false, length = 20)
     private TypeArticle type;
 
+    // F12 - gamme : temps de fabrication d'une unité sur machine, en minutes (0 pour un article acheté)
+    @Column(nullable = false)
+    private Integer tempsUnitaireMinutes = 0;
+
     // Lignes de nomenclature dont cet article est le composé : "de quoi il est fait"
     @OneToMany(mappedBy = "compose")
     private List<LigneNomenclatureEntity> composants = new ArrayList<>();

@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
@@ -68,6 +69,7 @@ public class OrdreFabricationService {
     public OrdreFabricationResponseDTO creer(OrdreFabricationRequestDTO dto) {
         OrdreFabricationEntity ordre = new OrdreFabricationEntity();
         dtoVersEntity(dto, ordre);
+        verifierMachineLibre(ordre);   // F12
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
     }
 
@@ -75,7 +77,24 @@ public class OrdreFabricationService {
     public OrdreFabricationResponseDTO modifier(Long id, OrdreFabricationRequestDTO dto) {
         OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
         dtoVersEntity(dto, ordre);
+        verifierMachineLibre(ordre);   // F12 - nouvelle date, machine ou quantité : le créneau est revérifié
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+    }
+
+    // F12 - aucun autre ordre non annulé de la machine ne doit recouvrir le créneau de cet ordre (409 citant l'ordre bloquant)
+    private void verifierMachineLibre(OrdreFabricationEntity ordre) {
+        if (ordre.getStatut() == StatutOrdre.ANNULE) {
+            return;
+        }
+        LocalDateTime debut = ordre.getDatePrevue();
+        LocalDateTime fin = ordre.dateFinPrevue();
+        for (OrdreFabricationEntity autre : ordreFabricationRepository.findByMachineIdAndStatutNot(ordre.getMachine().getId(), StatutOrdre.ANNULE)) {
+            if (!autre.getId().equals(ordre.getId()) && autre.chevauche(debut, fin)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "La machine " + ordre.getMachine().getCode() + " est déjà occupée par l'ordre " + autre.getId()
+                                + " du " + autre.getDatePrevue() + " au " + autre.dateFinPrevue());
+            }
+        }
     }
 
     // DELETE /ordres-fabrication/{id} : vérifie que l'ordre existe (404 sinon), puis le supprime
@@ -108,6 +127,7 @@ public class OrdreFabricationService {
         dto.setArticleLibelle(ordre.getArticle().getLibelle());
         dto.setQuantite(ordre.getQuantite());
         dto.setDatePrevue(ordre.getDatePrevue());
+        dto.setDateFinPrevue(ordre.dateFinPrevue());   // F12
         dto.setStatut(ordre.getStatut());
         dto.setMachineId(ordre.getMachine().getId());
         dto.setMachineCode(ordre.getMachine().getCode());

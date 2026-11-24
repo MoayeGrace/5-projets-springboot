@@ -3,6 +3,7 @@ package com.projet3.atelierdeproduction.DTO;
 import com.projet3.atelierdeproduction.Entity.TypeArticle;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,4 +28,8 @@ public class ArticleRequestDTO {
 
     @NotNull(message = "Le type est obligatoire (ACHETE ou FABRIQUE)")
     private TypeArticle type;
+
+    // F12 - temps de fabrication d'une unité en minutes ; facultatif (0 si absent)
+    @PositiveOrZero(message = "Le temps unitaire ne peut pas être négatif")
+    private Integer tempsUnitaireMinutes;
 }

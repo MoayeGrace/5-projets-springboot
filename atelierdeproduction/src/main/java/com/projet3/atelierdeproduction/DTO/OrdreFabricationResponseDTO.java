@@ -20,6 +20,7 @@ public class OrdreFabricationResponseDTO {
 
     private Integer quantite;
     private LocalDateTime datePrevue;
+    private LocalDateTime dateFinPrevue;   // F12 : fin du créneau occupé sur la machine
     private StatutOrdre statut;
 
     private Long machineId;

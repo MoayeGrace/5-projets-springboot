@@ -15,4 +15,5 @@ public class ArticleResponseDTO {
     private String libelle;
     private String unite;
     private TypeArticle type;
+    private Integer tempsUnitaireMinutes;   // F12
 }

@@ -59,6 +59,7 @@ public class ArticleService {
         article.setLibelle(dto.getLibelle());
         article.setUnite(dto.getUnite());
         article.setType(dto.getType());
+        article.setTempsUnitaireMinutes(dto.getTempsUnitaireMinutes() != null ? dto.getTempsUnitaireMinutes() : 0);   // F12
     }
 
     // Entity -> DTO
@@ -69,6 +70,7 @@ public class ArticleService {
         dto.setLibelle(article.getLibelle());
         dto.setUnite(article.getUnite());
         dto.setType(article.getType());
+        dto.setTempsUnitaireMinutes(article.getTempsUnitaireMinutes());   // F12
         return dto;
     }
 }

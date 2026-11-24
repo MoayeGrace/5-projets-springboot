@@ -42,4 +42,14 @@ public class OrdreFabricationEntity {
     @ManyToOne
     @JoinColumn(name = "operateur_id", nullable = false)
     private OperateurEntity operateur;
+
+    // F12 - fin du créneau machine : début + quantité × temps unitaire de la gamme
+    public LocalDateTime dateFinPrevue() {
+        return datePrevue.plusMinutes((long) quantite * article.getTempsUnitaireMinutes());
+    }
+
+    // F12 - vrai si le créneau de cet ordre recouvre l'intervalle [debut, fin[
+    public boolean chevauche(LocalDateTime debut, LocalDateTime fin) {
+        return datePrevue.isBefore(fin) && dateFinPrevue().isAfter(debut);
+    }
 }
