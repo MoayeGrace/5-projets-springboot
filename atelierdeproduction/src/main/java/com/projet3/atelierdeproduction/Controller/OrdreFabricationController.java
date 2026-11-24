@@ -1,5 +1,6 @@
 package com.projet3.atelierdeproduction.Controller;
 
+import com.projet3.atelierdeproduction.DTO.BesoinsOrdreDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
 import com.projet3.atelierdeproduction.DTO.StatutRequestDTO;
@@ -48,6 +49,12 @@ public class OrdreFabricationController {
     @PostMapping("/{id}/statut")
     public OrdreFabricationResponseDTO changerStatut(@PathVariable Long id, @Valid @RequestBody StatutRequestDTO dto) {
         return ordreFabricationService.changerStatut(id, dto.getStatut());
+    }
+
+    // F18 - GET /ordres-fabrication/{id}/besoins : par composant acheté, quantité nécessaire, disponible et écart (200, ou 404)
+    @GetMapping("/{id}/besoins")
+    public BesoinsOrdreDTO besoins(@PathVariable Long id) {
+        return ordreFabricationService.besoins(id);
     }
 
     // DELETE /ordres-fabrication/{id} : suppression d'un ordre (204, ou 404)

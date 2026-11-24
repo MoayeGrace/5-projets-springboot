@@ -1,5 +1,6 @@
 package com.projet3.atelierdeproduction.Service;
 
+import com.projet3.atelierdeproduction.DTO.BesoinsOrdreDTO;
 import com.projet3.atelierdeproduction.DTO.HistoriqueStatutDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
@@ -21,10 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -130,6 +133,37 @@ public class OrdreFabricationService {
         }
         appliquerStatut(ordre, nouveauStatut);
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+    }
+
+    // F18 - GET /ordres-fabrication/{id}/besoins : déploiement complet × quantité à produire, comparé au stock ;
+    // pour un ordre TERMINE, ce sont les quantités réellement consommées (réservées au lancement)
+    public BesoinsOrdreDTO besoins(Long id) {
+        OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
+        boolean reels = ordre.getStatut() == StatutOrdre.TERMINE;
+
+        Map<ArticleEntity, BigDecimal> necessaires = new LinkedHashMap<>();
+        if (reels) {
+            ordre.getConsommations().forEach(c -> necessaires.merge(c.getArticle(), c.getQuantite(), BigDecimal::add));
+        } else {
+            necessaires.putAll(deploiementService.besoinsAchetables(ordre.getArticle(), BigDecimal.valueOf(ordre.getQuantite())));
+        }
+
+        BesoinsOrdreDTO dto = new BesoinsOrdreDTO();
+        dto.setOrdreId(ordre.getId());
+        dto.setArticleReference(ordre.getArticle().getReference());
+        dto.setQuantite(ordre.getQuantite());
+        dto.setStatut(ordre.getStatut());
+        dto.setBesoinsReels(reels);
+        necessaires.forEach((composant, necessaire) -> {
+            BesoinsOrdreDTO.Ligne ligne = new BesoinsOrdreDTO.Ligne();
+            ligne.setReference(composant.getReference());
+            ligne.setLibelle(composant.getLibelle());
+            ligne.setQuantiteNecessaire(necessaire.setScale(3, RoundingMode.HALF_UP));
+            ligne.setQuantiteDisponible(composant.getStock());
+            ligne.setEcart(composant.getStock().subtract(necessaire).setScale(3, RoundingMode.HALF_UP));
+            dto.getBesoins().add(ligne);
+        });
+        return dto;
     }
 
     // F14 - au lancement : chaque composant acheté doit être disponible en quantité suffisante (409 listant les manques),
