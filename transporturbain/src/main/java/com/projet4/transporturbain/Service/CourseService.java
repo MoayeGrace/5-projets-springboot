@@ -2,6 +2,7 @@ package com.projet4.transporturbain.Service;
 
 import com.projet4.transporturbain.DTO.CourseRequestDTO;
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
+import com.projet4.transporturbain.DTO.PageResponseDTO;
 import com.projet4.transporturbain.Entity.BusEntity;
 import com.projet4.transporturbain.Entity.ConducteurEntity;
 import com.projet4.transporturbain.Entity.CourseEntity;
@@ -11,6 +12,8 @@ import com.projet4.transporturbain.Repository.ConducteurRepository;
 import com.projet4.transporturbain.Repository.CourseRepository;
 import com.projet4.transporturbain.Repository.LigneRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,12 +33,15 @@ public class CourseService {
     private final BusRepository busRepository;
     private final ConducteurRepository conducteurRepository;
 
-    // GET /courses : récupère toutes les courses
-    public List<CourseResponseDTO> lister() {
-        return courseRepository.findAll()
-                .stream()
-                .map(this::entityVersResponseDTO)
-                .toList();
+    // F10 - taille de page maximale autorisée
+    private static final int TAILLE_PAGE_MAX = 200;
+
+    // F10 - GET /courses?page=&size=&sort= : courses page par page (une taille > 200 est ramenée à 200)
+    public PageResponseDTO<CourseResponseDTO> lister(Pageable pageable) {
+        if (pageable.getPageSize() > TAILLE_PAGE_MAX) {
+            pageable = PageRequest.of(pageable.getPageNumber(), TAILLE_PAGE_MAX, pageable.getSort());
+        }
+        return new PageResponseDTO<>(courseRepository.findAll(pageable).map(this::entityVersResponseDTO));
     }
 
     // F7 - GET /lignes/{id}/courses?date= : courses de la ligne ce jour-là (aujourd'hui par défaut), par heure de départ

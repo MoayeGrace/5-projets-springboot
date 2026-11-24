@@ -2,13 +2,14 @@ package com.projet4.transporturbain.Controller;
 
 import com.projet4.transporturbain.DTO.CourseRequestDTO;
 import com.projet4.transporturbain.DTO.CourseResponseDTO;
+import com.projet4.transporturbain.DTO.PageResponseDTO;
 import com.projet4.transporturbain.Service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/courses")
@@ -17,10 +18,11 @@ public class CourseController {
 
     private final CourseService courseService;
 
-    // GET /courses : liste des courses (200)
+    // F10 - GET /courses?page=0&size=50&sort=heureDepart,asc : courses page par page (200, ou 400 si tri invalide)
+    // Pageable : Spring le remplit tout seul à partir de page, size et sort ; @PageableDefault = 1re page de 50 éléments
     @GetMapping
-    public List<CourseResponseDTO> lister() {
-        return courseService.lister();
+    public PageResponseDTO<CourseResponseDTO> lister(@PageableDefault(size = 50) Pageable pageable) {
+        return courseService.lister(pageable);
     }
 
     // GET /courses/{id} : détail d'une course (200, ou 404)
