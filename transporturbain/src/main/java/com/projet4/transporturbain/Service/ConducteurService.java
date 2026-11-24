@@ -54,6 +54,7 @@ public class ConducteurService {
         conducteur.setNom(dto.getNom());
         conducteur.setMatricule(dto.getMatricule());
         conducteur.setNumeroPermis(dto.getNumeroPermis());
+        conducteur.setDateValiditePermis(dto.getDateValiditePermis());   // F14 - un renouvellement rend le conducteur affectable
     }
 
     // Entity -> DTO
@@ -63,6 +64,7 @@ public class ConducteurService {
         dto.setNom(conducteur.getNom());
         dto.setMatricule(conducteur.getMatricule());
         dto.setNumeroPermis(conducteur.getNumeroPermis());
+        dto.setDateValiditePermis(conducteur.getDateValiditePermis());   // F14
         return dto;
     }
 }

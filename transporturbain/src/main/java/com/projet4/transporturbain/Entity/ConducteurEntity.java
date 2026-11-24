@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,9 @@ public class ConducteurEntity {
 
     @Column(nullable = false, unique = true, length = 30)
     private String numeroPermis;
+
+    // F14 - date jusqu'à laquelle le permis est valide
+    private LocalDate dateValiditePermis;
 
     @OneToMany(mappedBy = "conducteur")
     private List<CourseEntity> courses = new ArrayList<>();

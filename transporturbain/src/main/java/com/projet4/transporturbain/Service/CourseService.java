@@ -83,6 +83,7 @@ public class CourseService {
     public CourseResponseDTO creer(CourseRequestDTO dto) {
         CourseEntity course = new CourseEntity();
         dtoVersEntity(dto, course);
+        verifierPermis(course);            // F14
         verifierBusLibre(course);          // F12
         verifierConducteurLibre(course);   // F13
         return entityVersResponseDTO(courseRepository.save(course));
@@ -92,9 +93,20 @@ public class CourseService {
     public CourseResponseDTO modifier(Long id, CourseRequestDTO dto) {
         CourseEntity course = trouverOu404(courseRepository, id, "Course");
         dtoVersEntity(dto, course);
+        verifierPermis(course);            // F14 - changement de conducteur ou de date
         verifierBusLibre(course);          // F12 - nouveau bus ou nouvel horaire : le créneau est revérifié
         verifierConducteurLibre(course);   // F13 - nouveau conducteur ou nouvel horaire : idem
         return entityVersResponseDTO(courseRepository.save(course));
+    }
+
+    // F14 - le permis du conducteur doit être valide après la date de la course (400 indiquant la date d'expiration)
+    private void verifierPermis(CourseEntity course) {
+        LocalDate validite = course.getConducteur().getDateValiditePermis();
+        if (validite == null || !validite.isAfter(course.getDateCourse())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Le permis de " + course.getConducteur().getNom() + " expire le " + validite
+                            + " : il ne peut pas assurer une course le " + course.getDateCourse());
+        }
     }
 
     // F13 - aucune autre course non annulée du conducteur ne doit recouvrir le créneau départ -> arrivée (409) ;
