@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,4 +18,5 @@ public class ArticleResponseDTO {
     private String unite;
     private TypeArticle type;
     private Integer tempsUnitaireMinutes;   // F12
+    private BigDecimal stock;               // F14
 }

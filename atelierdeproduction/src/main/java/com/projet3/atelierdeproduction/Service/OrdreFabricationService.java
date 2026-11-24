@@ -4,6 +4,7 @@ import com.projet3.atelierdeproduction.DTO.HistoriqueStatutDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
+import com.projet3.atelierdeproduction.Entity.ConsommationEntity;
 import com.projet3.atelierdeproduction.Entity.HistoriqueStatutEntity;
 import com.projet3.atelierdeproduction.Entity.MachineEntity;
 import com.projet3.atelierdeproduction.Entity.OperateurEntity;
@@ -19,10 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 
@@ -34,6 +38,7 @@ public class OrdreFabricationService {
     private final ArticleRepository articleRepository;
     private final MachineRepository machineRepository;
     private final OperateurRepository operateurRepository;
+    private final DeploiementService deploiementService;   // F14
 
     // F8 - GET /ordres-fabrication?statut= : ordres du statut demandé (tous si absent), triés par date prévue
     public List<OrdreFabricationResponseDTO> lister(StatutOrdre statut) {
@@ -114,8 +119,49 @@ public class OrdreFabricationService {
                     "Passage de " + ordre.getStatut() + " à " + nouveauStatut + " interdit. Statuts atteignables : "
                             + ordre.getStatut().statutsAtteignables());
         }
+        if (nouveauStatut == StatutOrdre.LANCE) {
+            reserverComposants(ordre);    // F14
+        } else if (nouveauStatut == StatutOrdre.ANNULE && ordre.getStatut() == StatutOrdre.LANCE) {
+            libererComposants(ordre);     // F14 - un ordre lancé puis annulé rend sa matière au magasin
+        }
         appliquerStatut(ordre, nouveauStatut);
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+    }
+
+    // F14 - au lancement : chaque composant acheté doit être disponible en quantité suffisante (409 listant les manques),
+    // puis les quantités consommées sont réservées (retirées du stock et tracées sur l'ordre)
+    private void reserverComposants(OrdreFabricationEntity ordre) {
+        Map<ArticleEntity, BigDecimal> besoins =
+                deploiementService.besoinsAchetables(ordre.getArticle(), BigDecimal.valueOf(ordre.getQuantite()));
+
+        List<String> manquants = new ArrayList<>();
+        besoins.forEach((composant, necessaire) -> {
+            if (composant.getStock().compareTo(necessaire) < 0) {
+                manquants.add(composant.getReference() + " (manque " + necessaire.subtract(composant.getStock()).stripTrailingZeros().toPlainString() + ")");
+            }
+        });
+        if (!manquants.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Lancement impossible, composants manquants : " + String.join(", ", manquants));
+        }
+
+        besoins.forEach((composant, necessaire) -> {
+            composant.setStock(composant.getStock().subtract(necessaire));
+            ConsommationEntity consommation = new ConsommationEntity();
+            consommation.setOrdre(ordre);
+            consommation.setArticle(composant);
+            consommation.setQuantite(necessaire);
+            ordre.getConsommations().add(consommation);
+        });
+    }
+
+    // F14 - remet en stock les quantités réservées par l'ordre et efface les réservations
+    private void libererComposants(OrdreFabricationEntity ordre) {
+        for (ConsommationEntity consommation : ordre.getConsommations()) {
+            ArticleEntity composant = consommation.getArticle();
+            composant.setStock(composant.getStock().add(consommation.getQuantite()));
+        }
+        ordre.getConsommations().clear();
     }
 
     // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement)

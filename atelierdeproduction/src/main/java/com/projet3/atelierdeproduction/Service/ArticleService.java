@@ -10,6 +10,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 
 @Service
@@ -60,6 +62,7 @@ public class ArticleService {
         article.setUnite(dto.getUnite());
         article.setType(dto.getType());
         article.setTempsUnitaireMinutes(dto.getTempsUnitaireMinutes() != null ? dto.getTempsUnitaireMinutes() : 0);   // F12
+        article.setStock(dto.getStock() != null ? dto.getStock() : BigDecimal.ZERO);   // F14
     }
 
     // Entity -> DTO
@@ -71,6 +74,7 @@ public class ArticleService {
         dto.setUnite(article.getUnite());
         dto.setType(article.getType());
         dto.setTempsUnitaireMinutes(article.getTempsUnitaireMinutes());   // F12
+        dto.setStock(article.getStock());                                 // F14
         return dto;
     }
 }

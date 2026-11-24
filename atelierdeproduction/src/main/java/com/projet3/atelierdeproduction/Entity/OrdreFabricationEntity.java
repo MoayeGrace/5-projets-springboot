@@ -50,6 +50,10 @@ public class OrdreFabricationEntity {
     @OrderBy("dateChangement ASC")
     private List<HistoriqueStatutEntity> historique = new ArrayList<>();
 
+    // F14 - composants réservés au lancement ; cascade ALL : enregistrés et supprimés avec l'ordre
+    @OneToMany(mappedBy = "ordre", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ConsommationEntity> consommations = new ArrayList<>();
+
     // F12 - fin du créneau machine : début + quantité × temps unitaire de la gamme
     public LocalDateTime dateFinPrevue() {
         return datePrevue.plusMinutes((long) quantite * article.getTempsUnitaireMinutes());

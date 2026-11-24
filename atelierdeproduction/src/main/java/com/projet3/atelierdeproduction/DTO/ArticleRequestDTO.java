@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,4 +34,8 @@ public class ArticleRequestDTO {
     // F12 - temps de fabrication d'une unité en minutes ; facultatif (0 si absent)
     @PositiveOrZero(message = "Le temps unitaire ne peut pas être négatif")
     private Integer tempsUnitaireMinutes;
+
+    // F14 - quantité disponible en magasin ; facultative (0 si absente)
+    @PositiveOrZero(message = "Le stock ne peut pas être négatif")
+    private BigDecimal stock;
 }

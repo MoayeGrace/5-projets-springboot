@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,10 @@ public class ArticleEntity {
     // F12 - gamme : temps de fabrication d'une unité sur machine, en minutes (0 pour un article acheté)
     @Column(nullable = false)
     private Integer tempsUnitaireMinutes = 0;
+
+    // F14 - quantité disponible en magasin (diminuée par les réservations au lancement des ordres)
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal stock = BigDecimal.ZERO;
 
     // Lignes de nomenclature dont cet article est le composé : "de quoi il est fait"
     @OneToMany(mappedBy = "compose")
