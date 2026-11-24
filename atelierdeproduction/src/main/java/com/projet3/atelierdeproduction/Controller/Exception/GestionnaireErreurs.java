@@ -2,6 +2,8 @@ package com.projet3.atelierdeproduction.Controller.Exception;
 
 import com.projet3.atelierdeproduction.DTO.ErreurResponseDTO;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -38,6 +40,12 @@ public class GestionnaireErreurs {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErreurResponseDTO> mauvaisType(MethodArgumentTypeMismatchException ex) {
         return reponse(HttpStatus.BAD_REQUEST, "Paramètre invalide : " + ex.getName(), null);
+    }
+
+    // F10 - 400 : tri demandé sur un champ qui n'existe pas (ex : ?sort=inexistant,asc)
+    @ExceptionHandler({InvalidDataAccessApiUsageException.class, PropertyReferenceException.class})
+    public ResponseEntity<ErreurResponseDTO> triInvalide(RuntimeException ex) {
+        return reponse(HttpStatus.BAD_REQUEST, "Paramètre de tri invalide : ce champ n'existe pas", null);
     }
 
     // 404 (ou autre) : erreurs lancées par nos Services, ex : trouverOu404 -> "Article 99 introuvable"

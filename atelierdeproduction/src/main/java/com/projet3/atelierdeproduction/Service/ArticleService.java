@@ -2,12 +2,13 @@ package com.projet3.atelierdeproduction.Service;
 
 import com.projet3.atelierdeproduction.DTO.ArticleRequestDTO;
 import com.projet3.atelierdeproduction.DTO.ArticleResponseDTO;
+import com.projet3.atelierdeproduction.DTO.PageResponseDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
 import com.projet3.atelierdeproduction.Repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 
@@ -17,12 +18,15 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
 
-    // GET /articles : récupère tout le catalogue d'articles
-    public List<ArticleResponseDTO> lister() {
-        return articleRepository.findAll()
-                .stream()
-                .map(this::entityVersResponseDTO)
-                .toList();
+    // F10 - taille de page maximale autorisée
+    private static final int TAILLE_PAGE_MAX = 100;
+
+    // F10 - GET /articles?page=&size=&sort= : catalogue page par page (une taille > 100 est ramenée à 100)
+    public PageResponseDTO<ArticleResponseDTO> lister(Pageable pageable) {
+        if (pageable.getPageSize() > TAILLE_PAGE_MAX) {
+            pageable = PageRequest.of(pageable.getPageNumber(), TAILLE_PAGE_MAX, pageable.getSort());
+        }
+        return new PageResponseDTO<>(articleRepository.findAll(pageable).map(this::entityVersResponseDTO));
     }
 
     // GET /articles/{id} : récupère la fiche d'un article (404 s'il n'existe pas)
