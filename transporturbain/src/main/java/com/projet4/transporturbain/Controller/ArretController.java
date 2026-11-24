@@ -17,10 +17,10 @@ public class ArretController {
 
     private final ArretService arretService;
 
-    // GET /arrets : liste des arrêts (200)
+    // F9 - GET /arrets?commune=Cocody : arrêts de la commune triés par nom, avec les lignes qui les desservent (200)
     @GetMapping
-    public List<ArretResponseDTO> lister() {
-        return arretService.lister();
+    public List<ArretResponseDTO> lister(@RequestParam(required = false) String commune) {
+        return arretService.lister(commune);
     }
 
     // GET /arrets/{id} : détail d'un arrêt (200, ou 404)

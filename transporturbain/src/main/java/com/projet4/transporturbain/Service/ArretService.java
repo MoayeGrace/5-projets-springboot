@@ -4,6 +4,7 @@ import com.projet4.transporturbain.DTO.ArretRequestDTO;
 import com.projet4.transporturbain.DTO.ArretResponseDTO;
 import com.projet4.transporturbain.Entity.ArretEntity;
 import com.projet4.transporturbain.Repository.ArretRepository;
+import com.projet4.transporturbain.Repository.DesserteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +17,14 @@ import static com.projet4.transporturbain.Service.ServiceUtils.trouverOu404;
 public class ArretService {
 
     private final ArretRepository arretRepository;
+    private final DesserteRepository desserteRepository;   // F9
 
-    // GET /arrets : récupère tous les arrêts
-    public List<ArretResponseDTO> lister() {
-        return arretRepository.findAll()
-                .stream()
+    // F9 - GET /arrets?commune= : arrêts de la commune (tous si absente), sans tenir compte des majuscules, triés par nom
+    public List<ArretResponseDTO> lister(String commune) {
+        List<ArretEntity> arrets = (commune == null || commune.isBlank())
+                ? arretRepository.findAllByOrderByNomAsc()
+                : arretRepository.findByCommuneIgnoreCaseOrderByNomAsc(commune.trim());
+        return arrets.stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
     }
@@ -65,6 +69,10 @@ public class ArretService {
         dto.setCommune(arret.getCommune());
         dto.setLatitude(arret.getLatitude());
         dto.setLongitude(arret.getLongitude());
+        dto.setLignes(desserteRepository.findByArretIdOrderByLigneNumeroAsc(arret.getId()).stream()   // F9
+                .map(d -> d.getLigne().getNumero())
+                .distinct()
+                .toList());
         return dto;
     }
 }
