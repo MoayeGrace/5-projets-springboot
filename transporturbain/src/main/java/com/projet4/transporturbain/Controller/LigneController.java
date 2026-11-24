@@ -5,9 +5,11 @@ import com.projet4.transporturbain.DTO.DesserteRequestDTO;
 import com.projet4.transporturbain.DTO.DesserteResponseDTO;
 import com.projet4.transporturbain.DTO.LigneRequestDTO;
 import com.projet4.transporturbain.DTO.LigneResponseDTO;
+import com.projet4.transporturbain.DTO.PonctualiteDTO;
 import com.projet4.transporturbain.Service.CourseService;
 import com.projet4.transporturbain.Service.DesserteService;
 import com.projet4.transporturbain.Service.LigneService;
+import com.projet4.transporturbain.Service.StatistiqueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -25,6 +28,14 @@ public class LigneController {
     private final LigneService ligneService;
     private final DesserteService desserteService;   // F6
     private final CourseService courseService;       // F7
+    private final StatistiqueService statistiqueService;   // F18
+
+    // F18 - GET /lignes/{id}/ponctualite?mois=2026-11 : taux de ponctualité, retard moyen, détail horaire (200, 400 ou 404)
+    @GetMapping("/{id}/ponctualite")
+    public PonctualiteDTO ponctualite(@PathVariable Long id,
+                                      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth mois) {
+        return statistiqueService.ponctualite(id, mois);
+    }
 
     // F11 - POST /lignes/{id}/arrets : ajoute un arrêt au tracé, à une position et dans un sens (201, 400, 404 ou 409)
     @PostMapping("/{id}/arrets")

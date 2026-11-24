@@ -17,6 +17,10 @@ public interface CourseRepository extends JpaRepository<CourseEntity, Long> {
     // F17 : toutes les courses d'une journée, groupables par ligne puis triées par heure de départ
     List<CourseEntity> findByDateCourseOrderByLigneNumeroAscHeureDepartAsc(LocalDate dateCourse);
 
+    // F18 : courses d'une ligne avec un statut donné entre deux dates
+    List<CourseEntity> findByLigneIdAndStatutAndDateCourseBetweenOrderByDateCourseAscHeureDepartAsc(
+            Long ligneId, StatutCourse statut, LocalDate du, LocalDate au);
+
     // F12 : les courses d'un bus qui n'ont pas un statut donné (ex : hors annulées)
     List<CourseEntity> findByBusIdAndStatutNot(Long busId, StatutCourse statut);
 
