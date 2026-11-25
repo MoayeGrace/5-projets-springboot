@@ -2,11 +2,14 @@ package com.projet5.lapaie.Service;
 
 import com.projet5.lapaie.DTO.BulletinRequestDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
+import com.projet5.lapaie.DTO.PageResponseDTO;
 import com.projet5.lapaie.Entity.BulletinEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
 import com.projet5.lapaie.Repository.BulletinRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,12 +24,15 @@ public class BulletinService {
     private final BulletinRepository bulletinRepository;
     private final EmployeRepository employeRepository;
 
-    // GET /bulletins : récupère tous les bulletins
-    public List<BulletinResponseDTO> lister() {
-        return bulletinRepository.findAll()
-                .stream()
-                .map(this::entityVersResponseDTO)
-                .toList();
+    // F10 - taille de page maximale autorisée
+    private static final int TAILLE_PAGE_MAX = 200;
+
+    // F10 - GET /bulletins?page=&size=&sort= : bulletins page par page (une taille > 200 est ramenée à 200)
+    public PageResponseDTO<BulletinResponseDTO> lister(Pageable pageable) {
+        if (pageable.getPageSize() > TAILLE_PAGE_MAX) {
+            pageable = PageRequest.of(pageable.getPageNumber(), TAILLE_PAGE_MAX, pageable.getSort());
+        }
+        return new PageResponseDTO<>(bulletinRepository.findAll(pageable).map(this::entityVersResponseDTO));
     }
 
     // GET /bulletins/{id} : récupère un bulletin par son id (404 si introuvable)
