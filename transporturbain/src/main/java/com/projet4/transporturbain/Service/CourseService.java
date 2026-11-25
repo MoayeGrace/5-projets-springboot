@@ -120,9 +120,13 @@ public class CourseService {
         return entityVersResponseDTO(courseRepository.save(course));
     }
 
-    // PUT /courses/{id} : charge l'élément existant (404 sinon), remplace ses champs, puis UPDATE
+    // PUT /courses/{id} : seule une course PREVUE se modifie (404 si inconnue, 409 sinon) ; ses contrôles sont refaits
     public CourseResponseDTO modifier(Long id, CourseRequestDTO dto) {
         CourseEntity course = trouverOu404(courseRepository, id, "Course");
+        if (course.getStatut() != StatutCourse.PREVUE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Seule une course PREVUE peut être modifiée (statut actuel : " + course.getStatut() + ")");
+        }
         dtoVersEntity(dto, course);
         verifierPermis(course);            // F14 - changement de conducteur ou de date
         verifierBusLibre(course);          // F12 - nouveau bus ou nouvel horaire : le créneau est revérifié
@@ -173,9 +177,15 @@ public class CourseService {
         }
     }
 
-    // DELETE /courses/{id} : vérifie que l'élément existe (404 sinon), puis le supprime
+    // DELETE /courses/{id} : supprime une course PREVUE ou ANNULEE (404 si inconnue) ; une course partie ou terminée
+    // reste pour l'historique et les statistiques (409)
     public void supprimer(Long id) {
-        courseRepository.delete(trouverOu404(courseRepository, id, "Course"));
+        CourseEntity course = trouverOu404(courseRepository, id, "Course");
+        if (course.getStatut() == StatutCourse.EN_COURS || course.getStatut() == StatutCourse.TERMINEE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Une course " + course.getStatut() + " ne se supprime pas : elle sert à l'historique et aux statistiques");
+        }
+        courseRepository.delete(course);
     }
 
     // F15 - POST /courses/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon) ;
