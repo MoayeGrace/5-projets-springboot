@@ -19,7 +19,7 @@ public class ConducteurRequestDTO {
     private String nom;
 
     @NotBlank(message = "Le matricule est obligatoire")
-    @Size(max = 30)
+    @Size(max = 20, message = "Le matricule fait au plus 20 caractères")
     private String matricule;
 
     @NotBlank(message = "Le numéro de permis est obligatoire")

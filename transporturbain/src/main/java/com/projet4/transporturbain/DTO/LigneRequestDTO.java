@@ -23,11 +23,11 @@ public class LigneRequestDTO {
     private String libelle;
 
     @NotBlank(message = "Le terminus de départ est obligatoire")
-    @Size(max = 150)
+    @Size(max = 100, message = "Le terminus de départ fait au plus 100 caractères")
     private String terminusDepart;
 
     @NotBlank(message = "Le terminus d'arrivée est obligatoire")
-    @Size(max = 150)
+    @Size(max = 100, message = "Le terminus d'arrivée fait au plus 100 caractères")
     private String terminusArrivee;
 
     // F12 - durée du trajet en minutes
