@@ -26,12 +26,16 @@ public class ClientEntity {
     @Column(nullable = false, length = 30)
     private String telephone;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 300)
     private String adresse;
 
-    // Montant total que le client peut emprunter (plafond attaché à son profil)
-    @Column(nullable = false, precision = 12, scale = 2)
+    // F12 - montant total que le client peut emprunter (plafond attaché à son profil)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal plafondEmprunt;
+
+    // F16 - agent de crédit qui suit le client (une alerte d'impayés par agent)
+    @Column(nullable = false, length = 150)
+    private String agentCredit;
 
     @OneToMany(mappedBy = "client")
     private List<CompteEntity> comptes = new ArrayList<>();

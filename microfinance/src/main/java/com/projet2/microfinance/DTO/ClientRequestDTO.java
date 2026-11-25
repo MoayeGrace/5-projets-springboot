@@ -24,10 +24,14 @@ public class ClientRequestDTO {
     private String telephone;
 
     @NotBlank(message = "L'adresse est obligatoire")
-    @Size(max = 255)
+    @Size(max = 300)
     private String adresse;
 
     @NotNull(message = "Le plafond d'emprunt est obligatoire")
     @PositiveOrZero(message = "Le plafond d'emprunt ne peut pas être négatif")
     private BigDecimal plafondEmprunt;
+
+    @NotBlank(message = "L'agent de crédit est obligatoire")
+    @Size(max = 150)
+    private String agentCredit;
 }

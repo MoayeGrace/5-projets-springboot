@@ -4,7 +4,6 @@ import com.projet2.microfinance.DTO.ImputationDTO;
 import com.projet2.microfinance.DTO.PaiementRequestDTO;
 import com.projet2.microfinance.DTO.PaiementResponseDTO;
 import com.projet2.microfinance.Entity.EcheanceEntity;
-import com.projet2.microfinance.Entity.ImputationEntity;
 import com.projet2.microfinance.Entity.PaiementEntity;
 import com.projet2.microfinance.Entity.PretEntity;
 import com.projet2.microfinance.Entity.StatutPret;
@@ -18,6 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.projet2.microfinance.Service.ServiceUtils.trouverOu404;
@@ -51,8 +52,8 @@ public class PaiementService {
                 .toList();
     }
 
-    // F13 - POST /paiements : enregistre le paiement et l'impute sur les échéances, de la plus ancienne à la plus récente ;
-    // sur chaque échéance : pénalités, puis intérêts, puis capital. 409 si le prêt est soldé ou si le paiement dépasse le dû
+    // F13 - POST /paiements : enregistre le paiement et l'impute sur les échéances ; renvoie le détail échéance par échéance.
+    // 409 si le prêt est soldé ou si le paiement dépasse le dû
     @Transactional
     public PaiementResponseDTO creer(PaiementRequestDTO dto) {
         PretEntity pret = pretRepository.findByIdAvecVerrou(dto.getPretId())
@@ -64,34 +65,52 @@ public class PaiementService {
         paiement.setMontant(dto.getMontant());
         paiement.setModeReglement(dto.getModeReglement());
         paiement.setPret(pret);
+        List<ImputationDTO> detail = imputer(pret, paiement);
 
-        BigDecimal reste = dto.getMontant();
-        for (EcheanceEntity echeance : pret.getEcheances()) {   // déjà triées par numéro (@OrderBy)
+        cloturerSiSolde(pret, paiement.getDatePaiement());   // F15
+        PaiementResponseDTO reponse = entityVersResponseDTO(paiementRepository.save(paiement));
+        reponse.setImputations(detail);
+        return reponse;
+    }
+
+    // F13 - répartit le montant sur les échéances, de la plus ancienne à la plus récente ; sur chacune : pénalités, puis
+    // intérêts, puis capital. Les parts sont cumulées sur le paiement, le détail par échéance est renvoyé
+    private List<ImputationDTO> imputer(PretEntity pret, PaiementEntity paiement) {
+        List<ImputationDTO> detail = new ArrayList<>();
+        paiement.setPartPenalites(BigDecimal.ZERO);
+        paiement.setPartInterets(BigDecimal.ZERO);
+        paiement.setPartCapital(BigDecimal.ZERO);
+        BigDecimal reste = paiement.getMontant();
+        for (EcheanceEntity echeance : pret.getEcheances()) {   // déjà triées par date (@OrderBy)
             if (reste.signum() == 0) {
                 break;
             }
             if (echeance.resteAPayer().signum() == 0) {
                 continue;
             }
-            ImputationEntity imputation = new ImputationEntity();
-            imputation.setPaiement(paiement);
-            imputation.setEcheance(echeance);
+            BigDecimal penalites = reste.min(echeance.penalitesDues());     // 1. pénalités
+            reste = reste.subtract(penalites);
+            BigDecimal interets = reste.min(echeance.interetsDus());        // 2. intérêts
+            reste = reste.subtract(interets);
+            BigDecimal capital = reste.min(echeance.capitalDu());           // 3. capital
+            reste = reste.subtract(capital);
 
-            imputation.setPenalites(reste.min(echeance.penalitesDues()));      // 1. pénalités
-            reste = reste.subtract(imputation.getPenalites());
-            imputation.setInterets(reste.min(echeance.interetsDus()));         // 2. intérêts
-            reste = reste.subtract(imputation.getInterets());
-            imputation.setCapital(reste.min(echeance.capitalDu()));            // 3. capital
-            reste = reste.subtract(imputation.getCapital());
+            echeance.setPenalitesPaye(echeance.getPenalitesPaye().add(penalites));
+            echeance.setInteretsPaye(echeance.getInteretsPaye().add(interets));
+            echeance.setCapitalPaye(echeance.getCapitalPaye().add(capital));
+            paiement.setPartPenalites(paiement.getPartPenalites().add(penalites));
+            paiement.setPartInterets(paiement.getPartInterets().add(interets));
+            paiement.setPartCapital(paiement.getPartCapital().add(capital));
 
-            echeance.setPenalitesPayees(echeance.getPenalitesPayees().add(imputation.getPenalites()));
-            echeance.setInteretsPayes(echeance.getInteretsPayes().add(imputation.getInterets()));
-            echeance.setCapitalPaye(echeance.getCapitalPaye().add(imputation.getCapital()));
-            paiement.getImputations().add(imputation);
+            ImputationDTO ligne = new ImputationDTO();
+            ligne.setEcheanceId(echeance.getId());
+            ligne.setEcheanceNumero(echeance.numero());
+            ligne.setPenalites(penalites);
+            ligne.setInterets(interets);
+            ligne.setCapital(capital);
+            detail.add(ligne);
         }
-
-        cloturerSiSolde(pret, paiement.getDatePaiement());   // F15
-        return entityVersResponseDTO(paiementRepository.save(paiement));
+        return detail;
     }
 
     // F15 - à la fin de chaque imputation : si tout est remboursé, le prêt passe SOLDE et la date de solde est enregistrée
@@ -132,26 +151,32 @@ public class PaiementService {
         return entityVersResponseDTO(paiementRepository.save(paiement));
     }
 
-    // F13 - DELETE /paiements/{id} : annule l'imputation (les échéances redeviennent dues), puis supprime le paiement
+    // F13 - DELETE /paiements/{id} : supprime le paiement, remet les échéances à zéro et réimpute les paiements restants
+    // dans l'ordre chronologique (ce que couvrait le paiement supprimé redevient dû)
     @Transactional
     public void supprimer(Long id) {
         PaiementEntity paiement = trouverOu404(paiementRepository, id, "Paiement");
-        for (ImputationEntity imputation : paiement.getImputations()) {
-            EcheanceEntity echeance = imputation.getEcheance();
-            echeance.setPenalitesPayees(echeance.getPenalitesPayees().subtract(imputation.getPenalites()));
-            echeance.setInteretsPayes(echeance.getInteretsPayes().subtract(imputation.getInterets()));
-            echeance.setCapitalPaye(echeance.getCapitalPaye().subtract(imputation.getCapital()));
-        }
-        // F15 - un prêt soldé qui redevient dû repasse EN_COURS
         PretEntity pret = paiement.getPret();
+        pret.getPaiements().remove(paiement);
+        paiementRepository.delete(paiement);
+
+        for (EcheanceEntity echeance : pret.getEcheances()) {
+            echeance.setPenalitesPaye(BigDecimal.ZERO);
+            echeance.setInteretsPaye(BigDecimal.ZERO);
+            echeance.setCapitalPaye(BigDecimal.ZERO);
+        }
+        pret.getPaiements().stream()
+                .sorted(Comparator.comparing(PaiementEntity::getDatePaiement).thenComparing(PaiementEntity::getId))
+                .forEach(restant -> imputer(pret, restant));
+
+        // F15 - un prêt soldé qui redevient dû repasse EN_COURS
         if (pret.getStatut() == StatutPret.SOLDE && !pret.estEntierementRembourse()) {
             pret.setStatut(StatutPret.EN_COURS);
             pret.setDateSolde(null);
         }
-        paiementRepository.delete(paiement);
     }
 
-    // Entity -> DTO (avec le détail de l'imputation)
+    // Entity -> DTO (avec l'imputation retenue)
     private PaiementResponseDTO entityVersResponseDTO(PaiementEntity paiement) {
         PaiementResponseDTO dto = new PaiementResponseDTO();
         dto.setId(paiement.getId());
@@ -159,18 +184,9 @@ public class PaiementService {
         dto.setMontant(paiement.getMontant());
         dto.setModeReglement(paiement.getModeReglement());
         dto.setPretId(paiement.getPret().getId());
-        dto.setImputations(paiement.getImputations().stream().map(this::imputationVersDTO).toList());   // F13
-        return dto;
-    }
-
-    // F13 - Entity -> DTO pour une ligne d'imputation
-    private ImputationDTO imputationVersDTO(ImputationEntity imputation) {
-        ImputationDTO dto = new ImputationDTO();
-        dto.setEcheanceId(imputation.getEcheance().getId());
-        dto.setEcheanceNumero(imputation.getEcheance().getNumero());
-        dto.setPenalites(imputation.getPenalites());
-        dto.setInterets(imputation.getInterets());
-        dto.setCapital(imputation.getCapital());
+        dto.setPartPenalites(paiement.getPartPenalites());   // F9 / F13
+        dto.setPartInterets(paiement.getPartInterets());
+        dto.setPartCapital(paiement.getPartCapital());
         return dto;
     }
 }

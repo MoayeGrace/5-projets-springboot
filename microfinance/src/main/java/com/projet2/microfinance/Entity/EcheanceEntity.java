@@ -7,8 +7,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "echeance")
@@ -21,50 +19,47 @@ public class EcheanceEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Rang de l'échéance dans l'échéancier (1, 2, 3...)
-    @Column(nullable = false)
-    private Integer numero;
-
-    @Column(nullable = false)
-    private LocalDate dateEcheance;
-
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal montantCapital;
-
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal montantInterets;
-
-    // Capital + intérêts, calculé par le service
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal montantTotal = BigDecimal.ZERO;
-
-    // Part de capital déjà remboursée
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal capitalPaye = BigDecimal.ZERO;
-
-    // Part d'intérêts déjà remboursée
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal interetsPayes = BigDecimal.ZERO;
-
-    // F13 / F14 - pénalités de retard dues sur cette échéance (calculées par F14)
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal penalites = BigDecimal.ZERO;
-
-    // F13 - part des pénalités déjà remboursée
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal penalitesPayees = BigDecimal.ZERO;
-
     @ManyToOne
     @JoinColumn(name = "pret_id", nullable = false)
     private PretEntity pret;
 
-    // F19 - paiements imputés sur cette échéance (pour dater son remboursement)
-    @OneToMany(mappedBy = "echeance")
-    private List<ImputationEntity> imputations = new ArrayList<>();
+    @Column(nullable = false)
+    private LocalDate dateEcheance;
+
+    // Part de capital de l'échéance
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal capital;
+
+    // Part d'intérêts de l'échéance
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal interets;
+
+    // Capital + intérêts, calculé par le service
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal montantTotal = BigDecimal.ZERO;
+
+    // F14 - pénalités de retard ajoutées au dû
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal penalites = BigDecimal.ZERO;
+
+    // F13 - ce qui a déjà été remboursé sur cette échéance, poste par poste
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal capitalPaye = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal interetsPaye = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal penalitesPaye = BigDecimal.ZERO;
+
+    // Rang de l'échéance dans l'échéancier du prêt (1, 2, 3...), déduit de l'ordre des dates
+    public int numero() {
+        return pret.getEcheances().indexOf(this) + 1;
+    }
 
     // Total déjà payé sur cette échéance (pénalités comprises)
     public BigDecimal montantPaye() {
-        return capitalPaye.add(interetsPayes).add(penalitesPayees);
+        return capitalPaye.add(interetsPaye).add(penalitesPaye);
     }
 
     // Ce qu'il reste à payer sur cette échéance : capital + intérêts + pénalités, moins ce qui est déjà payé
@@ -74,16 +69,16 @@ public class EcheanceEntity {
 
     // F13 - pénalités restant dues
     public BigDecimal penalitesDues() {
-        return penalites.subtract(penalitesPayees);
+        return penalites.subtract(penalitesPaye);
     }
 
     // F13 - intérêts restant dus
     public BigDecimal interetsDus() {
-        return montantInterets.subtract(interetsPayes);
+        return interets.subtract(interetsPaye);
     }
 
     // F13 - capital restant dû
     public BigDecimal capitalDu() {
-        return montantCapital.subtract(capitalPaye);
+        return capital.subtract(capitalPaye);
     }
 }

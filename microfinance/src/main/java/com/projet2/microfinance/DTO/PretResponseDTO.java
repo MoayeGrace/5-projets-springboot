@@ -19,7 +19,7 @@ public class PretResponseDTO {
     private BigDecimal tauxAnnuel;
     private LocalDate dateAccord;
     private StatutPret statut;
-    private String agent;
+    private String agentCredit;
     private BigDecimal capitalRestantDu;   // F7 : capital qu'il reste à rembourser
     private boolean solde;                 // F7 : true si le prêt est soldé (distingué des prêts en cours)
     private LocalDate dateSolde;           // F15 : date du remboursement complet

@@ -21,7 +21,7 @@ public class PretEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal montant;
 
     @Column(nullable = false)
@@ -29,7 +29,7 @@ public class PretEntity {
 
     // Taux d'intérêt annuel en pourcentage (ex : 12.00 pour 12 %)
     @Column(nullable = false, precision = 5, scale = 2)
-    private BigDecimal tauxAnnuel;
+    private BigDecimal taux;
 
     @Column(nullable = false)
     private LocalDate dateAccord;
@@ -45,16 +45,12 @@ public class PretEntity {
     @Column(nullable = false)
     private Integer joursRetardMax = 0;
 
-    // Agent de crédit qui suit le dossier
-    @Column(nullable = false, length = 100)
-    private String agent;
-
     @ManyToOne
     @JoinColumn(name = "client_id", nullable = false)
     private ClientEntity client;
 
     @OneToMany(mappedBy = "pret")
-    @OrderBy("numero ASC")
+    @OrderBy("dateEcheance ASC")
     private List<EcheanceEntity> echeances = new ArrayList<>();
 
     @OneToMany(mappedBy = "pret")
@@ -74,7 +70,7 @@ public class PretEntity {
             return montant;
         }
         return echeances.stream()
-                .map(e -> e.getMontantCapital().subtract(e.getCapitalPaye()))
+                .map(EcheanceEntity::capitalDu)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

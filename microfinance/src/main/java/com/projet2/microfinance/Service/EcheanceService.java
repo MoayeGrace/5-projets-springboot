@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -47,7 +46,7 @@ public class EcheanceService {
     // F8 - GET /prets/{id}/echeances : échéancier du prêt trié par date (404 si le prêt n'existe pas, "non généré" s'il est vide)
     public EcheancierDTO echeancierDuPret(Long pretId) {
         trouverOu404(pretRepository, pretId, "Prêt");
-        List<EcheanceResponseDTO> echeances = echeanceRepository.findByPretIdOrderByDateEcheanceAscNumeroAsc(pretId)
+        List<EcheanceResponseDTO> echeances = echeanceRepository.findByPretIdOrderByDateEcheanceAsc(pretId)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
@@ -60,8 +59,8 @@ public class EcheanceService {
         return dto;
     }
 
-    // F11 - POST /prets/{id}/echeancier : une échéance par mois à mensualité constante ; la dernière ajuste le capital
-    // pour que la somme des capitaux égale exactement le montant emprunté. 409 si déjà généré, 400 si le prêt n'est pas ACCORDE
+    // F11 - POST /prets/{id}/echeancier : une échéance par mois à capital constant, intérêts = taux mensuel × capital restant dû ;
+    // la dernière ajuste le capital pour que la somme égale exactement le montant. 409 si déjà généré, 400 si le prêt n'est pas ACCORDE
     @Transactional
     public EcheancierDTO genererEcheancier(Long pretId) {
         PretEntity pret = trouverOu404(pretRepository, pretId, "Prêt");
@@ -74,8 +73,8 @@ public class EcheanceService {
         }
 
         int duree = pret.getDureeMois();
-        BigDecimal tauxMensuel = pret.getTauxAnnuel().divide(BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);
-        BigDecimal mensualite = calculerMensualite(pret.getMontant(), tauxMensuel, duree);
+        BigDecimal tauxMensuel = pret.getTaux().divide(BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);
+        BigDecimal capitalConstant = pret.getMontant().divide(BigDecimal.valueOf(duree), 2, RoundingMode.HALF_UP);
         BigDecimal capitalRestant = pret.getMontant();
 
         for (int numero = 1; numero <= duree; numero++) {
@@ -83,13 +82,12 @@ public class EcheanceService {
             // F11 - dernière échéance : on rembourse tout le capital restant (absorbe les écarts d'arrondi)
             BigDecimal capital = (numero == duree)
                     ? capitalRestant
-                    : mensualite.subtract(interets).min(capitalRestant);
+                    : capitalConstant.min(capitalRestant);
 
             EcheanceEntity echeance = new EcheanceEntity();
-            echeance.setNumero(numero);
             echeance.setDateEcheance(pret.getDateAccord().plusMonths(numero));
-            echeance.setMontantCapital(capital);
-            echeance.setMontantInterets(interets);
+            echeance.setCapital(capital);
+            echeance.setInterets(interets);
             echeance.setMontantTotal(capital.add(interets));
             echeance.setPret(pret);
             pret.getEcheances().add(echeanceRepository.save(echeance));
@@ -99,16 +97,6 @@ public class EcheanceService {
 
         pret.setStatut(StatutPret.EN_COURS);   // F11 - le prêt passe EN_COURS, ses paramètres sont désormais figés
         return echeancierDuPret(pretId);
-    }
-
-    // F11 - mensualité constante : M = C × t / (1 - (1 + t)^-n), ou C / n si le taux est nul
-    private BigDecimal calculerMensualite(BigDecimal montant, BigDecimal tauxMensuel, int duree) {
-        if (tauxMensuel.signum() == 0) {
-            return montant.divide(BigDecimal.valueOf(duree), 2, RoundingMode.HALF_UP);
-        }
-        BigDecimal facteur = BigDecimal.ONE.add(tauxMensuel).pow(duree, MathContext.DECIMAL64);   // (1 + t)^n
-        return montant.multiply(tauxMensuel).multiply(facteur)
-                .divide(facteur.subtract(BigDecimal.ONE), 2, RoundingMode.HALF_UP);
     }
 
     // F14 - pénalité par jour de retard : 0,1 % du montant dû
@@ -140,7 +128,7 @@ public class EcheanceService {
 
                 PenalitesDTO.Ligne ligne = new PenalitesDTO.Ligne();
                 ligne.setEcheanceId(echeance.getId());
-                ligne.setNumero(echeance.getNumero());
+                ligne.setNumero(echeance.numero());
                 ligne.setDateEcheance(echeance.getDateEcheance());
                 ligne.setMontantDu(montantDu);
                 ligne.setJoursRetard(joursRetard);
@@ -175,10 +163,9 @@ public class EcheanceService {
     private void dtoVersEntity(EcheanceRequestDTO dto, EcheanceEntity echeance) {
         PretEntity pret = trouverOu404(pretRepository, dto.getPretId(), "Prêt");
 
-        echeance.setNumero(dto.getNumero());
         echeance.setDateEcheance(dto.getDateEcheance());
-        echeance.setMontantCapital(dto.getMontantCapital());
-        echeance.setMontantInterets(dto.getMontantInterets());
+        echeance.setCapital(dto.getMontantCapital());
+        echeance.setInterets(dto.getMontantInterets());
         echeance.setMontantTotal(dto.getMontantCapital().add(dto.getMontantInterets()));
         echeance.setPret(pret);
     }
@@ -187,10 +174,10 @@ public class EcheanceService {
     private EcheanceResponseDTO entityVersResponseDTO(EcheanceEntity echeance) {
         EcheanceResponseDTO dto = new EcheanceResponseDTO();
         dto.setId(echeance.getId());
-        dto.setNumero(echeance.getNumero());
+        dto.setNumero(echeance.numero());
         dto.setDateEcheance(echeance.getDateEcheance());
-        dto.setMontantCapital(echeance.getMontantCapital());
-        dto.setMontantInterets(echeance.getMontantInterets());
+        dto.setMontantCapital(echeance.getCapital());
+        dto.setMontantInterets(echeance.getInterets());
         dto.setMontantTotal(echeance.getMontantTotal());
         dto.setPenalites(echeance.getPenalites());   // F13
         dto.setMontantPaye(echeance.montantPaye());

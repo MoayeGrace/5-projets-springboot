@@ -15,10 +15,6 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class EcheanceRequestDTO {
 
-    @NotNull(message = "Le numéro de l'échéance est obligatoire")
-    @Positive(message = "Le numéro doit être positif")
-    private Integer numero;
-
     @NotNull(message = "La date de l'échéance est obligatoire")
     private LocalDate dateEcheance;
 

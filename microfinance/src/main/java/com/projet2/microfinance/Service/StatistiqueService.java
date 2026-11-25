@@ -18,6 +18,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static com.projet2.microfinance.Service.ServiceUtils.trouverOu404;
@@ -74,29 +78,48 @@ public class StatistiqueService {
                 .multiply(BigDecimal.valueOf(100))
                 .divide(pret.getMontant(), 2, RoundingMode.HALF_UP));
 
+        Map<EcheanceEntity, LocalDate> datesReglement = datesReglement(pret);
         LocalDate aujourdhui = LocalDate.now();
         for (EcheanceEntity echeance : pret.getEcheances()) {
             SuiviPretDTO.Ligne ligne = new SuiviPretDTO.Ligne();
-            ligne.setNumero(echeance.getNumero());
+            ligne.setNumero(echeance.numero());
             ligne.setDateEcheance(echeance.getDateEcheance());
             ligne.setPrevu(echeance.getMontantTotal().add(echeance.getPenalites()));
             ligne.setPaye(echeance.montantPaye());
             ligne.setResteAPayer(echeance.resteAPayer());
-            ligne.setJoursRetard(joursRetard(echeance, aujourdhui));
+            ligne.setJoursRetard(joursRetard(echeance, datesReglement.getOrDefault(echeance, aujourdhui)));
             dto.getEcheances().add(ligne);
         }
         return dto;
     }
 
-    // F19 - retard constaté : jusqu'à aujourd'hui si l'échéance reste due, sinon jusqu'au dernier paiement qui l'a réglée
-    private long joursRetard(EcheanceEntity echeance, LocalDate aujourdhui) {
-        LocalDate fin = aujourdhui;
-        if (echeance.resteAPayer().signum() == 0) {
-            fin = echeance.getImputations().stream()
-                    .map(imputation -> imputation.getPaiement().getDatePaiement())
-                    .max(LocalDate::compareTo)
-                    .orElse(echeance.getDateEcheance());
+    // F19 - date de règlement de chaque échéance soldée : les paiements sont imputés de la plus ancienne échéance à la plus
+    // récente, donc une échéance est réglée par le premier paiement dont le cumul couvre tout le dû jusqu'à elle
+    private Map<EcheanceEntity, LocalDate> datesReglement(PretEntity pret) {
+        List<PaiementEntity> paiements = pret.getPaiements().stream()
+                .sorted(Comparator.comparing(PaiementEntity::getDatePaiement).thenComparing(PaiementEntity::getId))
+                .toList();
+        Map<EcheanceEntity, LocalDate> dates = new HashMap<>();
+        BigDecimal duCumule = BigDecimal.ZERO;
+        BigDecimal payeCumule = BigDecimal.ZERO;
+        int indexPaiement = 0;
+        for (EcheanceEntity echeance : pret.getEcheances()) {
+            if (echeance.resteAPayer().signum() > 0) {
+                break;   // les suivantes ne sont pas soldées non plus
+            }
+            duCumule = duCumule.add(echeance.getMontantTotal()).add(echeance.getPenalites());
+            while (payeCumule.compareTo(duCumule) < 0 && indexPaiement < paiements.size()) {
+                payeCumule = payeCumule.add(paiements.get(indexPaiement++).getMontant());
+            }
+            if (indexPaiement > 0) {
+                dates.put(echeance, paiements.get(indexPaiement - 1).getDatePaiement());
+            }
         }
+        return dates;
+    }
+
+    // F19 - retard constaté : de la date d'échéance jusqu'à son règlement (ou jusqu'à aujourd'hui si elle reste due)
+    private long joursRetard(EcheanceEntity echeance, LocalDate fin) {
         return Math.max(0, ChronoUnit.DAYS.between(echeance.getDateEcheance(), fin));
     }
 

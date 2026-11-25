@@ -29,7 +29,7 @@ public class CompteEntity {
     @Column(nullable = false)
     private LocalDate dateOuverture;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal solde = BigDecimal.ZERO;
 
     @ManyToOne

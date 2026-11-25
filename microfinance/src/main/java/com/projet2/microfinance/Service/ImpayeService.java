@@ -38,7 +38,7 @@ public class ImpayeService {
         for (EcheanceEntity echeance : echeanceRepository.findImpayees(aujourdhui)) {
             PretEntity pret = echeance.getPret();
             ImpayeClientDTO client = parAgent
-                    .computeIfAbsent(pret.getAgent(), agent -> new LinkedHashMap<>())
+                    .computeIfAbsent(pret.getClient().getAgentCredit(), agent -> new LinkedHashMap<>())
                     .computeIfAbsent(pret.getClient().getId(), id -> nouveauClient(pret));
             long jours = ajouterEcheance(client, echeance, aujourdhui);
 

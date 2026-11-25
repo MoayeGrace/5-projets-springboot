@@ -36,10 +36,6 @@ public class PretRequestDTO {
     // Facultatif : ACCORDE à la création si absent, inchangé à la modification si absent
     private StatutPret statut;
 
-    @NotBlank(message = "L'agent de crédit est obligatoire")
-    @Size(max = 100)
-    private String agent;
-
     @NotNull(message = "Le client est obligatoire")
     private Long clientId;
 }

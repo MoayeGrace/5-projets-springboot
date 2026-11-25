@@ -16,4 +16,5 @@ public class ClientResponseDTO {
     private String telephone;
     private String adresse;
     private BigDecimal plafondEmprunt;
+    private String agentCredit;
 }

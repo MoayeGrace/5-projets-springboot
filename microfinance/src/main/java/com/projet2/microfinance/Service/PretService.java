@@ -99,7 +99,7 @@ public class PretService {
         }
         boolean modifie = pret.getMontant().compareTo(dto.getMontant()) != 0
                 || !pret.getDureeMois().equals(dto.getDureeMois())
-                || pret.getTauxAnnuel().compareTo(dto.getTauxAnnuel()) != 0
+                || pret.getTaux().compareTo(dto.getTauxAnnuel()) != 0
                 || !pret.getDateAccord().equals(dto.getDateAccord());
         if (modifie) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -118,12 +118,11 @@ public class PretService {
 
         pret.setMontant(dto.getMontant());
         pret.setDureeMois(dto.getDureeMois());
-        pret.setTauxAnnuel(dto.getTauxAnnuel());
+        pret.setTaux(dto.getTauxAnnuel());
         pret.setDateAccord(dto.getDateAccord());
         if (dto.getStatut() != null) {
             pret.setStatut(dto.getStatut());
         }
-        pret.setAgent(dto.getAgent());
         pret.setClient(client);
     }
 
@@ -133,10 +132,10 @@ public class PretService {
         dto.setId(pret.getId());
         dto.setMontant(pret.getMontant());
         dto.setDureeMois(pret.getDureeMois());
-        dto.setTauxAnnuel(pret.getTauxAnnuel());
+        dto.setTauxAnnuel(pret.getTaux());
         dto.setDateAccord(pret.getDateAccord());
         dto.setStatut(pret.getStatut());
-        dto.setAgent(pret.getAgent());
+        dto.setAgentCredit(pret.getClient().getAgentCredit());
         dto.setCapitalRestantDu(pret.capitalRestantDu());           // F7
         dto.setSolde(pret.getStatut() == StatutPret.SOLDE);         // F7
         dto.setDateSolde(pret.getDateSolde());                      // F15

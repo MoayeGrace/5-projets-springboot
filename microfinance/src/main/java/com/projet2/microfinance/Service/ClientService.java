@@ -55,6 +55,7 @@ public class ClientService {
         client.setTelephone(dto.getTelephone());
         client.setAdresse(dto.getAdresse());
         client.setPlafondEmprunt(dto.getPlafondEmprunt());
+        client.setAgentCredit(dto.getAgentCredit());
     }
 
     // Entity -> DTO
@@ -65,6 +66,7 @@ public class ClientService {
         dto.setTelephone(client.getTelephone());
         dto.setAdresse(client.getAdresse());
         dto.setPlafondEmprunt(client.getPlafondEmprunt());
+        dto.setAgentCredit(client.getAgentCredit());
         return dto;
     }
 }
