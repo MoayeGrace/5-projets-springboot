@@ -58,6 +58,7 @@ public class PaiementService {
     public PaiementResponseDTO creer(PaiementRequestDTO dto) {
         PretEntity pret = pretRepository.findByIdAvecVerrou(dto.getPretId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prêt " + dto.getPretId() + " introuvable"));
+        verifierDate(pret, dto.getDatePaiement());
         verifierPaiementPossible(pret, dto.getMontant());
 
         PaiementEntity paiement = new PaiementEntity();
@@ -121,6 +122,14 @@ public class PaiementService {
         }
     }
 
+    // F13 - un paiement ne peut pas être daté dans le futur ni avant l'accord du prêt (400)
+    private void verifierDate(PretEntity pret, LocalDate datePaiement) {
+        if (datePaiement.isAfter(LocalDate.now()) || datePaiement.isBefore(pret.getDateAccord())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La date du paiement doit être comprise entre l'accord du prêt (" + pret.getDateAccord() + ") et aujourd'hui");
+        }
+    }
+
     // F13 - refuse un paiement sur un prêt soldé, sans échéancier, ou supérieur à ce qui reste dû (409)
     private void verifierPaiementPossible(PretEntity pret, BigDecimal montant) {
         if (pret.getStatut() == StatutPret.SOLDE) {
@@ -146,6 +155,7 @@ public class PaiementService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Le montant et le prêt d'un paiement imputé ne se modifient pas : supprimez-le puis ressaisissez-le");
         }
+        verifierDate(paiement.getPret(), dto.getDatePaiement());
         paiement.setDatePaiement(dto.getDatePaiement());
         paiement.setModeReglement(dto.getModeReglement());
         return entityVersResponseDTO(paiementRepository.save(paiement));
