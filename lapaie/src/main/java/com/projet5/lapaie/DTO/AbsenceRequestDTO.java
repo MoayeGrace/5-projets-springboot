@@ -26,6 +26,9 @@ public class AbsenceRequestDTO {
     @NotNull(message = "La date de fin est obligatoire")
     private LocalDate dateFin;
 
-    @Size(max = 255)
+    @Size(max = 300)
     private String motif;
+
+    // F13 - facultatif : par défaut, seule une absence SANS_SOLDE n'est pas rémunérée
+    private Boolean remuneree;
 }

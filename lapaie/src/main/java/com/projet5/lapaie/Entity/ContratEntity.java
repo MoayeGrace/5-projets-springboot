@@ -33,7 +33,7 @@ public class ContratEntity {
     // Date de fin ; null pour un contrat sans terme (CDI en cours)
     private LocalDate dateFin;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 100)
     private String poste;
 
     // Salaire de base mensuel

@@ -1,6 +1,6 @@
 package com.projet5.lapaie.DTO;
 
-import com.projet5.lapaie.Entity.TypeRubrique;
+import com.projet5.lapaie.Entity.TypeLigne;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -47,7 +47,7 @@ public class CumulAnnuelDTO {
     public static class ParRubrique {
         private String code;
         private String libelle;
-        private TypeRubrique type;
+        private TypeLigne type;
         private BigDecimal total = BigDecimal.ZERO;
     }
 }

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,24 +32,27 @@ public class BulletinEntity {
     private String mois;
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal brut;
-
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal net;
+    private BigDecimal brut = BigDecimal.ZERO;
 
     // F13 - total des retenues (cotisations)
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal retenues = BigDecimal.ZERO;
 
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal net = BigDecimal.ZERO;
+
+    // F14 / F16 - BROUILLON, puis EDITE (figé), puis CLOTURE (mois arrêté)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private EtatBulletin etat = EtatBulletin.BROUILLON;
+
+    // Date de la dernière modification, horodatée à chaque enregistrement
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime dateModification;
+
     // F13 - lignes du calcul ; cascade ALL : enregistrées et supprimées avec le bulletin
     @OneToMany(mappedBy = "bulletin", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordre ASC")
     private List<LigneBulletinEntity> lignes = new ArrayList<>();
-
-    // Vrai une fois le bulletin édité (remis à l'employé) : il n'est plus modifiable
-    @Column(nullable = false)
-    private Boolean edite = false;
-
-    // F14 - date et heure de l'édition
-    private LocalDateTime dateEdition;
 }

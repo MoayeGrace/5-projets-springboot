@@ -7,6 +7,7 @@ import com.projet5.lapaie.Entity.AbsenceEntity;
 import com.projet5.lapaie.Entity.BulletinEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
 import com.projet5.lapaie.Entity.LigneBulletinEntity;
+import com.projet5.lapaie.Entity.EtatBulletin;
 import com.projet5.lapaie.Entity.TypeAbsence;
 import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.BulletinRepository;
@@ -127,10 +128,16 @@ public class StatistiqueService {
     // F19 - ajoute chaque ligne du bulletin au cumul de sa rubrique
     private void cumulerRubriques(BulletinEntity bulletin, Map<String, CumulAnnuelDTO.ParRubrique> parRubrique) {
         for (LigneBulletinEntity ligne : bulletin.getLignes()) {
-            CumulAnnuelDTO.ParRubrique cumul = parRubrique.computeIfAbsent(ligne.getCode(), code -> {
+            // une ligne de rubrique est cumulée sous son code, les absences et régularisations sous leur type
+            String code = (ligne.getRubrique() != null) ? ligne.getRubrique().getCode() : ligne.getType().name();
+            CumulAnnuelDTO.ParRubrique cumul = parRubrique.computeIfAbsent(code, c -> {
                 CumulAnnuelDTO.ParRubrique nouveau = new CumulAnnuelDTO.ParRubrique();
-                nouveau.setCode(code);
-                nouveau.setLibelle(ligne.getCode().equals("REGULARISATION") ? "Régularisations" : ligne.getLibelle());
+                nouveau.setCode(c);
+                nouveau.setLibelle(switch (ligne.getType()) {
+                    case ABSENCE -> "Absences non rémunérées";
+                    case REGULARISATION -> "Régularisations";
+                    default -> ligne.getRubrique().getLibelle();
+                });
                 nouveau.setType(ligne.getType());
                 return nouveau;
             });
@@ -144,7 +151,7 @@ public class StatistiqueService {
         totaux.setRetenues(totaux.getRetenues().add(bulletin.getRetenues()));
         totaux.setNet(totaux.getNet().add(bulletin.getNet()));
         totaux.setEffectif(totaux.getEffectif() + 1);
-        if (!bulletin.getEdite()) {
+        if (bulletin.getEtat() == EtatBulletin.BROUILLON) {
             totaux.setBulletinsProvisoires(totaux.getBulletinsProvisoires() + 1);
             totaux.setProvisoire(true);
         }

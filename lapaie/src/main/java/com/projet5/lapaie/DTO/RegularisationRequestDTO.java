@@ -19,6 +19,6 @@ public class RegularisationRequestDTO {
     private BigDecimal montant;
 
     @NotBlank(message = "Le motif est obligatoire")
-    @Size(max = 200)
+    @Size(max = 300)
     private String motif;
 }

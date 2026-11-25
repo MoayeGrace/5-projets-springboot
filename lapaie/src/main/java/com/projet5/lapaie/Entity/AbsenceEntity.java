@@ -34,8 +34,12 @@ public class AbsenceEntity {
     @Column(nullable = false)
     private LocalDate dateFin;
 
-    @Column(length = 255)
+    @Column(length = 300)
     private String motif;
+
+    // F13 - une absence non rémunérée réduit le brut au prorata des jours
+    @Column(nullable = false)
+    private Boolean remuneree = true;
 
     // F12 - vrai si l'absence a au moins un jour en commun avec la période [debut, fin] (bornes incluses)
     public boolean chevauche(LocalDate debut, LocalDate fin) {

@@ -3,17 +3,18 @@ package com.projet5.lapaie.Service;
 import com.projet5.lapaie.DTO.ClotureResponseDTO;
 import com.projet5.lapaie.Entity.BulletinEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
-import com.projet5.lapaie.Entity.MoisClotureEntity;
+import com.projet5.lapaie.Entity.EtatBulletin;
 import com.projet5.lapaie.Repository.BulletinRepository;
 import com.projet5.lapaie.Repository.ContratRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
-import com.projet5.lapaie.Repository.MoisClotureRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,21 +24,20 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ClotureService {
 
-    private final MoisClotureRepository moisClotureRepository;
     private final EmployeRepository employeRepository;
     private final ContratRepository contratRepository;
     private final BulletinRepository bulletinRepository;
 
     // F16 - POST /mois/{mois}/cloture : arrête le mois si chaque employé ayant un contrat actif ce mois a un bulletin
-    // édité ; sinon 409 listant les employés concernés (409 aussi si le mois est déjà clôturé, 400 si le format est faux)
+    // édité ; ses bulletins passent alors à l'état CLOTURE. 409 listant les employés sans bulletin édité, 409 si déjà
+    // clôturé, 400 si le format est faux
+    @Transactional
     public ClotureResponseDTO cloturer(String mois) {
         YearMonth periode = lireMois(mois);
-        if (moisClotureRepository.existsByMois(mois)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le mois " + mois + " est déjà clôturé");
-        }
+        verifierMoisOuvert(mois);
 
         List<String> sansBulletinEdite = new ArrayList<>();
-        int nombreBulletins = 0;
+        List<BulletinEntity> edites = new ArrayList<>();
         for (EmployeEntity employe : employeRepository.findAll()) {
             boolean contratActif = contratRepository.findByEmployeId(employe.getId()).stream()
                     .anyMatch(c -> c.chevauche(periode.atDay(1), periode.atEndOfMonth()));
@@ -45,8 +45,8 @@ public class ClotureService {
                 continue;
             }
             Optional<BulletinEntity> bulletin = bulletinRepository.findByEmployeIdAndMois(employe.getId(), mois);
-            if (bulletin.isPresent() && bulletin.get().getEdite()) {
-                nombreBulletins++;
+            if (bulletin.isPresent() && bulletin.get().getEtat() == EtatBulletin.EDITE) {
+                edites.add(bulletin.get());
             } else {
                 sansBulletinEdite.add(employe.getMatricule() + " " + employe.getNom());
             }
@@ -55,21 +55,18 @@ public class ClotureService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Clôture impossible, employés sans bulletin édité en " + mois + " : " + String.join(", ", sansBulletinEdite));
         }
-
-        MoisClotureEntity cloture = new MoisClotureEntity();
-        cloture.setMois(mois);
-        moisClotureRepository.save(cloture);
+        edites.forEach(bulletin -> bulletin.setEtat(EtatBulletin.CLOTURE));
 
         ClotureResponseDTO dto = new ClotureResponseDTO();
         dto.setMois(mois);
-        dto.setDateCloture(cloture.getDateCloture());
-        dto.setNombreBulletins(nombreBulletins);
+        dto.setDateCloture(LocalDateTime.now());
+        dto.setNombreBulletins(edites.size());
         return dto;
     }
 
-    // F16 - 409 si le mois (AAAA-MM) est clôturé : plus de création ni de modification de bulletin sur ce mois
+    // F16 - 409 si le mois (AAAA-MM) est clôturé (ses bulletins sont à l'état CLOTURE) : plus de création ni de modification
     public void verifierMoisOuvert(String mois) {
-        if (moisClotureRepository.existsByMois(mois)) {
+        if (bulletinRepository.existsByMoisAndEtat(mois, EtatBulletin.CLOTURE)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Le mois " + mois + " est clôturé : aucune modification possible");
         }
     }

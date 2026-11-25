@@ -4,6 +4,7 @@ import com.projet5.lapaie.DTO.AbsenceRequestDTO;
 import com.projet5.lapaie.DTO.AbsenceResponseDTO;
 import com.projet5.lapaie.Entity.AbsenceEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
+import com.projet5.lapaie.Entity.TypeAbsence;
 import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
@@ -103,6 +104,7 @@ public class AbsenceService {
         absence.setDateDebut(dto.getDateDebut());
         absence.setDateFin(dto.getDateFin());
         absence.setMotif(dto.getMotif());
+        absence.setRemuneree(dto.getRemuneree() != null ? dto.getRemuneree() : dto.getType() != TypeAbsence.SANS_SOLDE);   // F13
         absence.setEmploye(employe);
     }
 
@@ -114,6 +116,7 @@ public class AbsenceService {
         dto.setDateDebut(absence.getDateDebut());
         dto.setDateFin(absence.getDateFin());
         dto.setMotif(absence.getMotif());
+        dto.setRemuneree(absence.getRemuneree());   // F13
         dto.setDureeJours(absence.dureeJours());   // F8
         dto.setEmployeId(absence.getEmploye().getId());
         dto.setEmployeNom(absence.getEmploye().getNom());

@@ -5,7 +5,6 @@ import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.MasseSalarialeDTO;
 import com.projet5.lapaie.DTO.PageResponseDTO;
 import com.projet5.lapaie.DTO.RegularisationRequestDTO;
-import com.projet5.lapaie.DTO.RegularisationResponseDTO;
 import com.projet5.lapaie.Service.BulletinService;
 import com.projet5.lapaie.Service.StatistiqueService;
 import jakarta.validation.Valid;
@@ -61,10 +60,11 @@ public class BulletinController {
         return bulletinService.editer(id);
     }
 
-    // F15 - POST /bulletins/{id}/regularisation : { "montant": 15000, "motif": "..." } corrige un bulletin édité (201, 400, 404 ou 409)
+    // F15 - POST /bulletins/{id}/regularisation : { "montant": 50, "motif": "..." } corrige un bulletin édité ;
+    // renvoie le bulletin suivant qui porte la ligne de régularisation (201, 400, 404 ou 409)
     @PostMapping("/{id}/regularisation")
     @ResponseStatus(HttpStatus.CREATED)
-    public RegularisationResponseDTO regulariser(@PathVariable Long id, @Valid @RequestBody RegularisationRequestDTO dto) {
+    public BulletinResponseDTO regulariser(@PathVariable Long id, @Valid @RequestBody RegularisationRequestDTO dto) {
         return bulletinService.regulariser(id, dto);
     }
 

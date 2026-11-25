@@ -1,5 +1,6 @@
 package com.projet5.lapaie.DTO;
 
+import com.projet5.lapaie.Entity.EtatBulletin;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,9 +21,10 @@ public class BulletinResponseDTO {
 
     private String mois;
     private BigDecimal brut;
-    private BigDecimal net;
     private BigDecimal retenues;              // F13
-    private boolean edite;
-    private LocalDateTime dateEdition;        // F14
+    private BigDecimal net;
+
+    private EtatBulletin etat;                // F7 / F14 / F16 : BROUILLON, EDITE ou CLOTURE
+    private LocalDateTime dateModification;
     private List<LigneBulletinDTO> lignes;    // F13 : détail du calcul, ligne par ligne
 }

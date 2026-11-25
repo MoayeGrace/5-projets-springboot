@@ -18,11 +18,11 @@ public class RubriqueEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Code court de la rubrique (ex : PRIME_TRANSPORT, CNPS)
-    @Column(nullable = false, unique = true, length = 30)
+    // Code court de la rubrique (ex : SAL_BASE, COT_RET)
+    @Column(nullable = false, unique = true, length = 20)
     private String code;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 100)
     private String libelle;
 
     @Enumerated(EnumType.STRING)
@@ -34,11 +34,6 @@ public class RubriqueEntity {
     private BigDecimal taux;
 
     // F13 - rang de la rubrique dans le calcul du bulletin (1 = appliquée en premier)
-    @Column(nullable = false)
-    private Integer ordreCalcul = 0;
-
-    // F13 - montant sur lequel s'applique le taux
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Assiette assiette = Assiette.SALAIRE_BASE;
+    @Column(nullable = false, unique = true)
+    private Integer ordreCalcul;
 }

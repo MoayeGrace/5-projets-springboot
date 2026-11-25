@@ -2,7 +2,6 @@ package com.projet5.lapaie.Service;
 
 import com.projet5.lapaie.DTO.RubriqueRequestDTO;
 import com.projet5.lapaie.DTO.RubriqueResponseDTO;
-import com.projet5.lapaie.Entity.Assiette;
 import com.projet5.lapaie.Entity.RubriqueEntity;
 import com.projet5.lapaie.Repository.RubriqueRepository;
 import lombok.RequiredArgsConstructor;
@@ -56,8 +55,7 @@ public class RubriqueService {
         rubrique.setLibelle(dto.getLibelle());
         rubrique.setType(dto.getType());
         rubrique.setTaux(dto.getTaux());
-        rubrique.setOrdreCalcul(dto.getOrdreCalcul());                                                       // F13
-        rubrique.setAssiette(dto.getAssiette() != null ? dto.getAssiette() : Assiette.SALAIRE_BASE);       // F13
+        rubrique.setOrdreCalcul(dto.getOrdreCalcul());   // F13
     }
 
     // Entity -> DTO
@@ -69,7 +67,6 @@ public class RubriqueService {
         dto.setType(rubrique.getType());
         dto.setTaux(rubrique.getTaux());
         dto.setOrdreCalcul(rubrique.getOrdreCalcul());   // F13
-        dto.setAssiette(rubrique.getAssiette());         // F13
         return dto;
     }
 }

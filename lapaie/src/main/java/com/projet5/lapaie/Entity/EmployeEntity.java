@@ -23,14 +23,14 @@ public class EmployeEntity {
     @Column(nullable = false, length = 150)
     private String nom;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, unique = true, length = 20)
     private String matricule;
 
     @Column(nullable = false)
     private LocalDate dateEmbauche;
 
     // Service de rattachement (ex : TECHNIQUE, COMMERCIAL)
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 50)
     private String service;
 
     @OneToMany(mappedBy = "employe")

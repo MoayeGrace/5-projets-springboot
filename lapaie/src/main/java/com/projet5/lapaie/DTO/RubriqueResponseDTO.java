@@ -1,6 +1,5 @@
 package com.projet5.lapaie.DTO;
 
-import com.projet5.lapaie.Entity.Assiette;
 import com.projet5.lapaie.Entity.TypeRubrique;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,5 +18,4 @@ public class RubriqueResponseDTO {
     private TypeRubrique type;
     private BigDecimal taux;
     private Integer ordreCalcul;   // F13
-    private Assiette assiette;     // F13
 }
