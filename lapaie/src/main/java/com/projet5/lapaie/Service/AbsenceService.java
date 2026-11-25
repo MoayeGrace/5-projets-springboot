@@ -23,6 +23,7 @@ public class AbsenceService {
 
     private final AbsenceRepository absenceRepository;
     private final EmployeRepository employeRepository;
+    private final ClotureService clotureService;   // F16
 
     // GET /absences : récupère toutes les absences
     public List<AbsenceResponseDTO> lister() {
@@ -68,6 +69,7 @@ public class AbsenceService {
         if (dto.getDateFin().isBefore(dto.getDateDebut())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de fin précède la date de début");
         }
+        clotureService.verifierPeriodeOuverte(dto.getDateDebut(), dto.getDateFin());   // F16 - pas d'absence sur un mois clôturé
         for (AbsenceEntity autre : absenceRepository.findByEmployeId(dto.getEmployeId())) {
             if (!autre.getId().equals(idExclu) && autre.chevauche(dto.getDateDebut(), dto.getDateFin())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -80,6 +82,7 @@ public class AbsenceService {
     // PUT /absences/{id} : charge l'élément existant (404 sinon), remplace ses champs, puis UPDATE
     public AbsenceResponseDTO modifier(Long id, AbsenceRequestDTO dto) {
         AbsenceEntity absence = trouverOu404(absenceRepository, id, "Absence");
+        clotureService.verifierPeriodeOuverte(absence.getDateDebut(), absence.getDateFin());   // F16 - ancienne période
         verifierPeriodeLibre(dto, id);     // F12 - une date corrigée ne doit pas créer de chevauchement
         dtoVersEntity(dto, absence);
         return entityVersResponseDTO(absenceRepository.save(absence));
@@ -87,7 +90,9 @@ public class AbsenceService {
 
     // DELETE /absences/{id} : vérifie que l'élément existe (404 sinon), puis le supprime
     public void supprimer(Long id) {
-        absenceRepository.delete(trouverOu404(absenceRepository, id, "Absence"));
+        AbsenceEntity absence = trouverOu404(absenceRepository, id, "Absence");
+        clotureService.verifierPeriodeOuverte(absence.getDateDebut(), absence.getDateFin());   // F16
+        absenceRepository.delete(absence);
     }
 
     // DTO -> Entity (employeId est transformé en objet, 404 s'il n'existe pas)

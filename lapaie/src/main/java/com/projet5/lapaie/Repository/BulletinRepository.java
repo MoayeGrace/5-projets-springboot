@@ -16,6 +16,9 @@ public interface BulletinRepository extends JpaRepository<BulletinEntity, Long> 
     // F13 : vrai si l'employé a déjà un bulletin pour ce mois
     boolean existsByEmployeIdAndMois(Long employeId, String mois);
 
+    // F16 : le bulletin d'un employé pour un mois
+    Optional<BulletinEntity> findByEmployeIdAndMois(Long employeId, String mois);
+
     // F15 : le premier bulletin non édité de l'employé après un mois donné (les mois AAAA-MM se comparent comme du texte)
     Optional<BulletinEntity> findFirstByEmployeIdAndMoisGreaterThanAndEditeFalseOrderByMoisAsc(Long employeId, String mois);
 }

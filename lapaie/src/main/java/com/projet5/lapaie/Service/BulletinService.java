@@ -51,6 +51,7 @@ public class BulletinService {
     private final AbsenceRepository absenceRepository;     // F13
     private final RubriqueRepository rubriqueRepository;   // F13
     private final RegularisationRepository regularisationRepository;   // F15
+    private final ClotureService clotureService;                       // F16
 
     // F10 - taille de page maximale autorisée
     private static final int TAILLE_PAGE_MAX = 200;
@@ -83,6 +84,7 @@ public class BulletinService {
     @Transactional
     public BulletinResponseDTO creer(BulletinRequestDTO dto) {
         EmployeEntity employe = trouverOu404(employeRepository, dto.getEmployeId(), "Employé");
+        clotureService.verifierMoisOuvert(dto.getMois());   // F16
         YearMonth mois = YearMonth.parse(dto.getMois());
         if (bulletinRepository.existsByEmployeIdAndMois(employe.getId(), dto.getMois())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -249,6 +251,7 @@ public class BulletinService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Le bulletin " + bulletin.getId() + " est édité : il ne peut plus être modifié ni supprimé");
         }
+        clotureService.verifierMoisOuvert(bulletin.getMois());   // F16 - mois clôturé : plus de modification
     }
 
     // PUT /bulletins/{id} : corrige le brut et/ou le net d'un bulletin avant édition (404 si introuvable, 409 si édité)
