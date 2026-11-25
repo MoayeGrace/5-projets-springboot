@@ -1,10 +1,12 @@
 package com.projet5.lapaie.Service;
 
+import com.projet5.lapaie.DTO.CumulAnnuelDTO;
 import com.projet5.lapaie.DTO.MasseSalarialeDTO;
 import com.projet5.lapaie.DTO.SoldeCongesDTO;
 import com.projet5.lapaie.Entity.AbsenceEntity;
 import com.projet5.lapaie.Entity.BulletinEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
+import com.projet5.lapaie.Entity.LigneBulletinEntity;
 import com.projet5.lapaie.Entity.TypeAbsence;
 import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.BulletinRepository;
@@ -18,6 +20,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -82,6 +86,56 @@ public class StatistiqueService {
         dto.setSolde(acquis.subtract(BigDecimal.valueOf(consommes)));
         dto.setSoldeNegatif(dto.getSolde().signum() < 0);
         return dto;
+    }
+
+    // F19 - GET /employes/{id}/cumul?annee= : brut, retenues et net mois par mois (régularisations incluses), total annuel
+    // et détail par rubrique ; les mois sans bulletin sont à zéro, un employé embauché dans l'année part de son premier bulletin
+    public CumulAnnuelDTO cumulAnnuel(Long employeId, Integer annee) {
+        EmployeEntity employe = trouverOu404(employeRepository, employeId, "Employé");
+        int an = (annee != null) ? annee : LocalDate.now().getYear();
+        List<BulletinEntity> bulletins = bulletinRepository.findByEmployeIdAndMoisStartingWithOrderByMoisDesc(employeId, an + "-");
+
+        CumulAnnuelDTO dto = new CumulAnnuelDTO();
+        dto.setEmployeId(employe.getId());
+        dto.setEmployeNom(employe.getNom());
+        dto.setAnnee(an);
+
+        int premierMois = 1;
+        if (employe.getDateEmbauche().getYear() == an) {
+            premierMois = bulletins.stream()
+                    .mapToInt(b -> YearMonth.parse(b.getMois()).getMonthValue())
+                    .min()
+                    .orElse(employe.getDateEmbauche().getMonthValue());
+        }
+        Map<String, CumulAnnuelDTO.ParRubrique> parRubrique = new LinkedHashMap<>();
+        for (int m = premierMois; m <= 12; m++) {
+            CumulAnnuelDTO.Montants ligne = new CumulAnnuelDTO.Montants();
+            ligne.setMois(YearMonth.of(an, m).toString());
+            for (BulletinEntity bulletin : bulletins) {
+                if (bulletin.getMois().equals(ligne.getMois())) {
+                    ligne.ajouter(bulletin.getBrut(), bulletin.getRetenues(), bulletin.getNet());
+                    cumulerRubriques(bulletin, parRubrique);
+                }
+            }
+            dto.getMois().add(ligne);
+            dto.getTotal().ajouter(ligne.getBrut(), ligne.getRetenues(), ligne.getNet());
+        }
+        dto.getRubriques().addAll(parRubrique.values());
+        return dto;
+    }
+
+    // F19 - ajoute chaque ligne du bulletin au cumul de sa rubrique
+    private void cumulerRubriques(BulletinEntity bulletin, Map<String, CumulAnnuelDTO.ParRubrique> parRubrique) {
+        for (LigneBulletinEntity ligne : bulletin.getLignes()) {
+            CumulAnnuelDTO.ParRubrique cumul = parRubrique.computeIfAbsent(ligne.getCode(), code -> {
+                CumulAnnuelDTO.ParRubrique nouveau = new CumulAnnuelDTO.ParRubrique();
+                nouveau.setCode(code);
+                nouveau.setLibelle(ligne.getCode().equals("REGULARISATION") ? "Régularisations" : ligne.getLibelle());
+                nouveau.setType(ligne.getType());
+                return nouveau;
+            });
+            cumul.setTotal(cumul.getTotal().add(ligne.getMontant()));
+        }
     }
 
     // F17 - cumule un bulletin dans des totaux

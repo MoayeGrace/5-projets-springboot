@@ -3,6 +3,7 @@ package com.projet5.lapaie.Controller;
 import com.projet5.lapaie.DTO.AbsenceResponseDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.ContratResponseDTO;
+import com.projet5.lapaie.DTO.CumulAnnuelDTO;
 import com.projet5.lapaie.DTO.EmployeRequestDTO;
 import com.projet5.lapaie.DTO.EmployeResponseDTO;
 import com.projet5.lapaie.DTO.SoldeCongesDTO;
@@ -30,6 +31,12 @@ public class EmployeController {
     private final BulletinService bulletinService; // F7
     private final AbsenceService absenceService;   // F8
     private final StatistiqueService statistiqueService;   // F18
+
+    // F19 - GET /employes/{id}/cumul?annee=2026 : brut, retenues et net mois par mois, total annuel, détail par rubrique (200, ou 404)
+    @GetMapping("/{id}/cumul")
+    public CumulAnnuelDTO cumul(@PathVariable Long id, @RequestParam(required = false) Integer annee) {
+        return statistiqueService.cumulAnnuel(id, annee);
+    }
 
     // F18 - GET /employes/{id}/solde-conges?date=2026-11-30 : jours acquis, consommés et solde (200, ou 404)
     @GetMapping("/{id}/solde-conges")
