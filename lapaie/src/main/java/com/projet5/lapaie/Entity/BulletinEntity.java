@@ -4,10 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +47,6 @@ public class BulletinEntity {
     private EtatBulletin etat = EtatBulletin.BROUILLON;
 
     // Date de la dernière modification, horodatée à chaque enregistrement
-    @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime dateModification;
 
@@ -55,4 +54,11 @@ public class BulletinEntity {
     @OneToMany(mappedBy = "bulletin", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordre ASC")
     private List<LigneBulletinEntity> lignes = new ArrayList<>();
+
+    // Horodate chaque enregistrement, à la seconde près comme la colonne DATETIME (la réponse = la valeur stockée)
+    @PrePersist
+    @PreUpdate
+    private void horodater() {
+        dateModification = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 }

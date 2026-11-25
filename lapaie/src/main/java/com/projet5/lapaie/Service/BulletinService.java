@@ -94,7 +94,7 @@ public class BulletinService {
         bulletin.setEmploye(employe);
         bulletin.setMois(dto.getMois());
         calculer(bulletin, contrat, mois);
-        return entityVersResponseDTO(bulletinRepository.save(bulletin));
+        return entityVersResponseDTO(bulletinRepository.saveAndFlush(bulletin));   // flush : date de modification à jour
     }
 
     // F15 - POST /bulletins/{id}/regularisation : corrige un bulletin édité sans le toucher ; une ligne de régularisation
@@ -118,7 +118,7 @@ public class BulletinService {
         ligne.setMoisCorrige(origine.getMois());   // référence au bulletin corrigé : même employé, ce mois
         ligne.setMotif(dto.getMotif());
         cible.setNet(cible.getNet().add(dto.getMontant()));
-        return entityVersResponseDTO(bulletinRepository.save(cible));
+        return entityVersResponseDTO(bulletinRepository.saveAndFlush(cible));
     }
 
     // F13 - le contrat qui couvre au moins un jour du mois (le plus récent s'il y en a plusieurs) ; 400 s'il n'y en a aucun
@@ -213,7 +213,7 @@ public class BulletinService {
                     "Le bulletin " + id + " est incomplet : il doit être calculé et son net doit être positif");
         }
         bulletin.setEtat(EtatBulletin.EDITE);
-        return entityVersResponseDTO(bulletinRepository.save(bulletin));
+        return entityVersResponseDTO(bulletinRepository.saveAndFlush(bulletin));
     }
 
     // F14 / F16 - seul un bulletin en BROUILLON, sur un mois ouvert, se modifie ou se supprime (409)
@@ -235,7 +235,7 @@ public class BulletinService {
         if (dto.getNet() != null) {
             bulletin.setNet(dto.getNet());
         }
-        return entityVersResponseDTO(bulletinRepository.save(bulletin));
+        return entityVersResponseDTO(bulletinRepository.saveAndFlush(bulletin));
     }
 
     // DELETE /bulletins/{id} : vérifie que le bulletin existe (404 sinon) et n'est pas édité (409), puis le supprime
