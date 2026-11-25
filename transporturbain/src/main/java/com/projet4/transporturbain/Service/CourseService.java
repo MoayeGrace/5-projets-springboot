@@ -198,6 +198,10 @@ public class CourseService {
                     "Passage de " + course.getStatut() + " à " + nouveau + " interdit. Statuts atteignables : "
                             + course.getStatut().statutsAtteignables());
         }
+        if (nouveau == StatutCourse.EN_COURS && course.getDateCourse().isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La course " + id + " est prévue le " + course.getDateCourse() + " : elle ne peut pas partir avant ce jour");
+        }
         if (nouveau == StatutCourse.TERMINEE) {
             course.setHeureArriveeReelle(dto.getHeureArriveeReelle() != null ? dto.getHeureArriveeReelle() : LocalTime.now().withNano(0));
         }
