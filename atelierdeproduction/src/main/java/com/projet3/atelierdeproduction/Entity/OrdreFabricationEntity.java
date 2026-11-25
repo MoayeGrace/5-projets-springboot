@@ -4,10 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "ordre_fabrication")
@@ -56,9 +56,15 @@ public class OrdreFabricationEntity {
     private Integer retardJours = 0;
 
     // F13 - date du dernier changement (dont le statut), horodatée à chaque enregistrement
-    @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime dateModification;
+
+    // F13 - horodate chaque enregistrement, à la seconde près comme la colonne DATETIME (la réponse = la valeur stockée)
+    @PrePersist
+    @PreUpdate
+    private void horodater() {
+        dateModification = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 
     // F12 - vrai si le créneau de cet ordre recouvre l'intervalle [debut, fin[
     public boolean chevauche(LocalDateTime debut, LocalDateTime fin) {

@@ -79,7 +79,7 @@ public class OrdreFabricationService {
         OrdreFabricationEntity ordre = new OrdreFabricationEntity();
         dtoVersEntity(dto, ordre);
         verifierMachineLibre(ordre);   // F12
-        return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+        return entityVersResponseDTO(ordreFabricationRepository.saveAndFlush(ordre));   // flush : date de modification à jour
     }
 
     // PUT /ordres-fabrication/{id} : seul un ordre PLANIFIE se modifie (409 sinon) ; le créneau est revérifié (F12)
@@ -91,7 +91,7 @@ public class OrdreFabricationService {
         }
         dtoVersEntity(dto, ordre);
         verifierMachineLibre(ordre);
-        return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+        return entityVersResponseDTO(ordreFabricationRepository.saveAndFlush(ordre));
     }
 
     // F12 - le créneau ne doit recouvrir ni l'arrêt de maintenance de la machine, ni un autre ordre non annulé (409)
@@ -141,7 +141,7 @@ public class OrdreFabricationService {
             libererComposants(ordre);    // ANNULE après lancement
         }
         ordre.setStatut(nouveauStatut);   // F13 - la date de modification est horodatée à l'enregistrement
-        return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
+        return entityVersResponseDTO(ordreFabricationRepository.saveAndFlush(ordre));
     }
 
     // F18 - GET /ordres-fabrication/{id}/besoins : déploiement complet × quantité, comparé au disponible ; un ordre lancé
