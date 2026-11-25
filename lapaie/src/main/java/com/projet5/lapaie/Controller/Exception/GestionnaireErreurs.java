@@ -60,11 +60,15 @@ public class GestionnaireErreurs {
         String cause = String.valueOf(ex.getMostSpecificCause().getMessage());
         String message;
         if (cause.contains("Duplicate entry")) {
-            message = "Cette valeur existe déjà (matricule, code de rubrique ou bulletin du mois déjà existant)";
+            message = cause.contains("uk_employe_matricule") ? "Ce matricule est déjà utilisé par un autre employé"
+                    : cause.contains("uk_rubrique_code") ? "Ce code de rubrique est déjà utilisé"
+                    : cause.contains("uk_rubrique_ordre") ? "Une autre rubrique a déjà cet ordre de calcul"
+                    : cause.contains("uk_bulletin_mois") ? "Cet employé a déjà un bulletin pour ce mois"
+                    : "Cette valeur existe déjà";
         } else if (cause.contains("foreign key")) {
             message = "Opération impossible : cet élément est encore utilisé par d'autres données";
         } else {
-            message = "Opération refusée par la base de données";
+            message = "Opération refusée par la base de données : " + cause;
         }
         return reponse(HttpStatus.CONFLICT, message, null);
     }
