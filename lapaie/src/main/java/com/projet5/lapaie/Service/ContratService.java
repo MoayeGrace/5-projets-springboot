@@ -7,7 +7,9 @@ import com.projet5.lapaie.Entity.EmployeEntity;
 import com.projet5.lapaie.Repository.ContratRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -45,6 +47,7 @@ public class ContratService {
 
     // POST /contrats : enregistre un nouveau contrat (INSERT)
     public ContratResponseDTO creer(ContratRequestDTO dto) {
+        verifierPeriodeLibre(dto, null);   // F11
         ContratEntity contrat = new ContratEntity();
         dtoVersEntity(dto, contrat);
         return entityVersResponseDTO(contratRepository.save(contrat));
@@ -53,8 +56,24 @@ public class ContratService {
     // PUT /contrats/{id} : charge l'élément existant (404 sinon), remplace ses champs, puis UPDATE
     public ContratResponseDTO modifier(Long id, ContratRequestDTO dto) {
         ContratEntity contrat = trouverOu404(contratRepository, id, "Contrat");
+        verifierPeriodeLibre(dto, id);     // F11 - ex : terminer un contrat avant d'en créer un nouveau (avenant)
         dtoVersEntity(dto, contrat);
         return entityVersResponseDTO(contratRepository.save(contrat));
+    }
+
+    // F11 - aucun autre contrat de l'employé ne doit recouvrir la période demandée (409 citant le contrat en conflit) ;
+    // un contrat sans date de fin bloque toute période postérieure à son début
+    private void verifierPeriodeLibre(ContratRequestDTO dto, Long idExclu) {
+        if (dto.getDateFin() != null && dto.getDateFin().isBefore(dto.getDateDebut())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de fin précède la date de début");
+        }
+        for (ContratEntity autre : contratRepository.findByEmployeId(dto.getEmployeId())) {
+            if (!autre.getId().equals(idExclu) && autre.chevauche(dto.getDateDebut(), dto.getDateFin())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Période en conflit avec le contrat " + autre.getId() + " (" + autre.getType() + " du "
+                                + autre.getDateDebut() + (autre.getDateFin() != null ? " au " + autre.getDateFin() : ", sans terme") + ")");
+            }
+        }
     }
 
     // DELETE /contrats/{id} : vérifie que l'élément existe (404 sinon), puis le supprime

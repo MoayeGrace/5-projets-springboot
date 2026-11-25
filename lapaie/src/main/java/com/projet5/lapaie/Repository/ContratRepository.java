@@ -11,4 +11,7 @@ public interface ContratRepository extends JpaRepository<ContratEntity, Long> {
 
     // F6 : les contrats d'un employé, du plus récent au plus ancien
     List<ContratEntity> findByEmployeIdOrderByDateDebutDesc(Long employeId);
+
+    // F11 : tous les contrats d'un employé
+    List<ContratEntity> findByEmployeId(Long employeId);
 }
