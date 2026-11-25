@@ -9,6 +9,7 @@ import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static com.projet5.lapaie.Service.ServiceUtils.trouverOu404;
@@ -31,6 +32,15 @@ public class ContratService {
     // GET /contrats/{id} : récupère un contrat par son id (404 si introuvable)
     public ContratResponseDTO detail(Long id) {
         return entityVersResponseDTO(trouverOu404(contratRepository, id, "Contrat"));
+    }
+
+    // F6 - GET /employes/{id}/contrats : carrière de l'employé, du contrat le plus récent au plus ancien (404 si inconnu)
+    public List<ContratResponseDTO> listerParEmploye(Long employeId) {
+        trouverOu404(employeRepository, employeId, "Employé");
+        return contratRepository.findByEmployeIdOrderByDateDebutDesc(employeId)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
     }
 
     // POST /contrats : enregistre un nouveau contrat (INSERT)
@@ -73,6 +83,7 @@ public class ContratService {
         dto.setDateFin(contrat.getDateFin());
         dto.setPoste(contrat.getPoste());
         dto.setSalaireBase(contrat.getSalaireBase());
+        dto.setActif(contrat.estActifLe(LocalDate.now()));   // F6
         dto.setEmployeId(contrat.getEmploye().getId());
         dto.setEmployeNom(contrat.getEmploye().getNom());
         return dto;

@@ -23,4 +23,5 @@ public class ContratResponseDTO {
     private LocalDate dateFin;
     private String poste;
     private BigDecimal salaireBase;
+    private boolean actif;   // F6 : true pour le contrat en vigueur aujourd'hui
 }

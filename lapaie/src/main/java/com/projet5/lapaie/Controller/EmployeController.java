@@ -1,7 +1,9 @@
 package com.projet5.lapaie.Controller;
 
+import com.projet5.lapaie.DTO.ContratResponseDTO;
 import com.projet5.lapaie.DTO.EmployeRequestDTO;
 import com.projet5.lapaie.DTO.EmployeResponseDTO;
+import com.projet5.lapaie.Service.ContratService;
 import com.projet5.lapaie.Service.EmployeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,13 @@ import java.util.List;
 public class EmployeController {
 
     private final EmployeService employeService;
+    private final ContratService contratService;   // F6
+
+    // F6 - GET /employes/{id}/contrats : contrats du plus récent au plus ancien, le contrat actif signalé (200, ou 404)
+    @GetMapping("/{id}/contrats")
+    public List<ContratResponseDTO> contrats(@PathVariable Long id) {
+        return contratService.listerParEmploye(id);
+    }
 
     // GET /employes : effectif (200)
     @GetMapping

@@ -39,4 +39,9 @@ public class ContratEntity {
     // Salaire de base mensuel
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal salaireBase;
+
+    // F6 - vrai si le contrat couvre la date donnée (commencé, et pas encore terminé)
+    public boolean estActifLe(LocalDate date) {
+        return !dateDebut.isAfter(date) && (dateFin == null || !dateFin.isBefore(date));
+    }
 }
