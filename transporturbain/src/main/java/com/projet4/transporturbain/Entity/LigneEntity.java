@@ -26,10 +26,10 @@ public class LigneEntity {
     @Column(nullable = false, length = 150)
     private String libelle;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 100)
     private String terminusDepart;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 100)
     private String terminusArrivee;
 
     // F12 - durée d'une course d'un terminus à l'autre, en minutes

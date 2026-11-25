@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -194,14 +195,21 @@ public class CourseService {
         return entityVersResponseDTO(courseRepository.save(course));
     }
 
-    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; le statut ne change pas ici, F15)
+    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; le statut ne change pas ici, F15) ;
+    // F12 - arrivée prévue = départ + durée du trajet, la course doit finir le jour même (400 sinon)
     private void dtoVersEntity(CourseRequestDTO dto, CourseEntity course) {
         LigneEntity ligne = trouverOu404(ligneRepository, dto.getLigneId(), "Ligne");
         BusEntity bus = trouverOu404(busRepository, dto.getBusId(), "Bus");
         ConducteurEntity conducteur = trouverOu404(conducteurRepository, dto.getConducteurId(), "Conducteur");
+        LocalDateTime arrivee = dto.getDateCourse().atTime(dto.getHeureDepart()).plusMinutes(ligne.getDureeTrajetMinutes());
+        if (!arrivee.toLocalDate().equals(dto.getDateCourse())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La course doit arriver au terminus le jour même (arrivée prévue : " + arrivee + ")");
+        }
 
         course.setDateCourse(dto.getDateCourse());
         course.setHeureDepart(dto.getHeureDepart());
+        course.setHeureArriveePrevue(arrivee.toLocalTime());
         course.setLigne(ligne);
         course.setBus(bus);
         course.setConducteur(conducteur);
