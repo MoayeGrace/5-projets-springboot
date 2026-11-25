@@ -64,7 +64,7 @@ public class CommandeService {
         commande.setProduit(produit);
         commande.setQuantite(dto.getQuantite());
         commande.setPrixUnitaire(produit.getPrix());   // F15 - le prix du jour est copié et ne bougera plus
-        return entityVersResponseDTO(commandeRepository.save(commande));
+        return entityVersResponseDTO(commandeRepository.saveAndFlush(commande));   // F13 - flush : date de modification à jour dans la réponse
     }
 
     // PUT /commandes/{id} + F11/F12 : seule une commande EN_ATTENTE est modifiable ; l'ancienne quantité est rendue au stock
@@ -93,7 +93,7 @@ public class CommandeService {
         commande.setClient(client);
         commande.setProduit(nouveauProduit);
         commande.setQuantite(dto.getQuantite());
-        return entityVersResponseDTO(commandeRepository.save(commande));
+        return entityVersResponseDTO(commandeRepository.saveAndFlush(commande));   // F13 - flush : date de modification à jour dans la réponse
     }
 
     // DELETE /commandes/{id} : l'énoncé CRUD dit "supprime une commande annulée" -> seule une commande ANNULEE est supprimable
@@ -117,7 +117,7 @@ public class CommandeService {
         CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
         verifierTransition(commande, nouveauStatut);
         appliquerStatut(commande, nouveauStatut);
-        return entityVersResponseDTO(commandeRepository.save(commande));
+        return entityVersResponseDTO(commandeRepository.saveAndFlush(commande));   // F13 - flush : date de modification à jour dans la réponse
     }
 
     // F14 - POST /commandes/{id}/annulation : seule une commande EN_ATTENTE ou PAYEE est annulable ;
@@ -131,7 +131,7 @@ public class CommandeService {
         produit.modifierStock(produit.getStock() + commande.getQuantite());
 
         appliquerStatut(commande, StatutCommande.ANNULEE);
-        return entityVersResponseDTO(commandeRepository.save(commande));
+        return entityVersResponseDTO(commandeRepository.saveAndFlush(commande));   // F13 - flush : date de modification à jour dans la réponse
     }
 
     // F19 - GET /commandes/a-expedier/export : fichier CSV des commandes PAYEE, trié par vendeur
