@@ -80,15 +80,15 @@ public class PretService {
     private void verifierLimites(PretRequestDTO dto) {
         ClientEntity client = trouverOu404(clientRepository, dto.getClientId(), "Client");
         long pretsActifs = pretRepository.countByClientIdAndStatutNot(client.getId(), StatutPret.SOLDE);
-        if (pretsActifs >= MAX_PRETS_ACTIFS) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Le client a déjà " + pretsActifs + " prêts actifs (maximum " + MAX_PRETS_ACTIFS + ")");
-        }
         BigDecimal dejaEmprunte = pretRepository.sommeMontantsSaufStatut(client.getId(), StatutPret.SOLDE);
+        String situation = pretsActifs + " prêt(s) actif(s) sur " + MAX_PRETS_ACTIFS + " autorisés, " + dejaEmprunte
+                + " emprunté(s) pour un plafond de " + client.getPlafondEmprunt();
+        if (pretsActifs >= MAX_PRETS_ACTIFS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nombre maximal de prêts actifs atteint : " + situation);
+        }
         if (dejaEmprunte.add(dto.getMontant()).compareTo(client.getPlafondEmprunt()) > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Plafond atteint : " + pretsActifs + " prêt(s) actif(s) pour " + dejaEmprunte
-                            + ", + " + dto.getMontant() + " dépasse le plafond de " + client.getPlafondEmprunt());
+                    "Plafond atteint : " + dto.getMontant() + " de plus dépasserait le plafond (" + situation + ")");
         }
     }
 
