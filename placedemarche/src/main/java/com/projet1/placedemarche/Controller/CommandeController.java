@@ -2,7 +2,6 @@ package com.projet1.placedemarche.Controller;
 
 import com.projet1.placedemarche.DTO.CommandeRequestDTO;
 import com.projet1.placedemarche.DTO.CommandeResponseDTO;
-import com.projet1.placedemarche.DTO.HistoriqueStatutDTO;
 import com.projet1.placedemarche.DTO.StatutRequestDTO;
 import com.projet1.placedemarche.Service.CommandeService;
 import jakarta.validation.Valid;
@@ -58,12 +57,6 @@ public class CommandeController {
     @PostMapping("/{id}/statut")
     public CommandeResponseDTO changerStatut(@PathVariable Long id, @Valid @RequestBody StatutRequestDTO dto) {
         return commandeService.changerStatut(id, dto.getStatut());
-    }
-
-    // F13 - GET /commandes/{id}/historique : les changements de statut horodatés (200, ou 404)
-    @GetMapping("/{id}/historique")
-    public List<HistoriqueStatutDTO> historique(@PathVariable Long id) {
-        return commandeService.historique(id);
     }
 
     // F14 - POST /commandes/{id}/annulation : annule et restitue le stock (200 ; 409 si EXPEDIEE, LIVREE ou déjà annulée)

@@ -15,18 +15,18 @@ import java.util.List;
 @Repository
 public interface CommandeRepository extends JpaRepository<CommandeEntity, Long> {
 
-    // F8 : les commandes d'un client, de la plus récente à la plus ancienne
-    List<CommandeEntity> findByClientIdOrderByDateCommandeDesc(Long clientId);
+    // F8 : les commandes d'un client, de la plus récemment modifiée à la plus ancienne
+    List<CommandeEntity> findByClientIdOrderByDateModificationDesc(Long clientId);
 
     // F16 - nombre de commandes d'un produit dans un statut donné (ici EN_ATTENTE)
     long countByProduitIdAndStatut(Long produitId, StatutCommande statut);
 
-    // F17 - commandes LIVRÉES d'un vendeur dont la livraison tombe dans la période
+    // F17 - commandes LIVRÉES d'un vendeur livrées dans la période (LIVREE est final : la date de modification est celle de la livraison)
     @Query("""
             SELECT c FROM CommandeEntity c
             WHERE c.produit.vendeur.id = :vendeurId
               AND c.statut = :statut
-              AND c.dateLivraison >= :debut AND c.dateLivraison < :fin
+              AND c.dateModification >= :debut AND c.dateModification < :fin
             """)
     List<CommandeEntity> livreesParVendeur(@Param("vendeurId") Long vendeurId,
                                            @Param("statut") StatutCommande statut,
@@ -40,7 +40,7 @@ public interface CommandeRepository extends JpaRepository<CommandeEntity, Long> 
                        p.id, p.nom, v.raisonSociale, SUM(c.quantite), SUM(c.prixUnitaire * c.quantite))
             FROM CommandeEntity c JOIN c.produit p JOIN p.vendeur v
             WHERE c.statut <> :exclu
-              AND c.dateCommande >= :debut AND c.dateCommande < :fin
+              AND c.dateModification >= :debut AND c.dateModification < :fin
             GROUP BY p.id, p.nom, v.raisonSociale
             ORDER BY SUM(c.quantite) DESC
             """)

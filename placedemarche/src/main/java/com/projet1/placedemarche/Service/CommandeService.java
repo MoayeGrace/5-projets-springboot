@@ -2,10 +2,8 @@ package com.projet1.placedemarche.Service;
 
 import com.projet1.placedemarche.DTO.CommandeRequestDTO;
 import com.projet1.placedemarche.DTO.CommandeResponseDTO;
-import com.projet1.placedemarche.DTO.HistoriqueStatutDTO;
 import com.projet1.placedemarche.Entity.ClientEntity;
 import com.projet1.placedemarche.Entity.CommandeEntity;
-import com.projet1.placedemarche.Entity.HistoriqueStatutEntity;
 import com.projet1.placedemarche.Entity.ProduitEntity;
 import com.projet1.placedemarche.Entity.StatutCommande;
 import com.projet1.placedemarche.Repository.ClientRepository;
@@ -18,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.projet1.placedemarche.Service.ServiceUtils.trouverOu404;
@@ -44,10 +41,10 @@ public class CommandeService {
         return entityVersResponseDTO(trouverOu404(commandeRepository, id, "Commande"));
     }
 
-    // F8 - GET /clients/{id}/commandes : historique d'un client, du plus récent au plus ancien (404 si le client n'existe pas)
+    // F8 - GET /clients/{id}/commandes : commandes d'un client, de la plus récemment modifiée à la plus ancienne (404 si le client n'existe pas)
     public List<CommandeResponseDTO> listerParClient(Long clientId) {
         trouverOu404(clientRepository, clientId, "Client");
-        return commandeRepository.findByClientIdOrderByDateCommandeDesc(clientId)
+        return commandeRepository.findByClientIdOrderByDateModificationDesc(clientId)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
@@ -100,7 +97,7 @@ public class CommandeService {
     }
 
     // DELETE /commandes/{id} : l'énoncé CRUD dit "supprime une commande annulée" -> seule une commande ANNULEE est supprimable
-    // (son stock a déjà été rendu par F14 ; son historique est supprimé avec elle grâce à la cascade)
+    // (son stock a déjà été rendu par F14)
     @Transactional
     public void supprimer(Long id) {
         CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
@@ -135,18 +132,6 @@ public class CommandeService {
 
         appliquerStatut(commande, StatutCommande.ANNULEE);
         return entityVersResponseDTO(commandeRepository.save(commande));
-    }
-
-    // F13 - GET /commandes/{id}/historique : tous les changements de statut, horodatés, du plus ancien au plus récent
-    public List<HistoriqueStatutDTO> historique(Long id) {
-        CommandeEntity commande = trouverOu404(commandeRepository, id, "Commande");
-        return commande.getHistorique().stream().map(h -> {
-            HistoriqueStatutDTO dto = new HistoriqueStatutDTO();
-            dto.setAncienStatut(h.getAncienStatut());
-            dto.setNouveauStatut(h.getNouveauStatut());
-            dto.setDateChangement(h.getDateChangement());
-            return dto;
-        }).toList();
     }
 
     // F19 - GET /commandes/a-expedier/export : fichier CSV des commandes PAYEE, trié par vendeur
@@ -194,18 +179,9 @@ public class CommandeService {
         }
     }
 
-    // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement) ; F17 - date de livraison
+    // F13 - change le statut ; la date de modification est horodatée automatiquement à l'enregistrement
     private void appliquerStatut(CommandeEntity commande, StatutCommande nouveauStatut) {
-        HistoriqueStatutEntity ligne = new HistoriqueStatutEntity();
-        ligne.setCommande(commande);
-        ligne.setAncienStatut(commande.getStatut());
-        ligne.setNouveauStatut(nouveauStatut);
-        commande.getHistorique().add(ligne);   // enregistré avec la commande grâce à la cascade
-
         commande.setStatut(nouveauStatut);
-        if (nouveauStatut == StatutCommande.LIVREE) {
-            commande.setDateLivraison(LocalDateTime.now());
-        }
     }
 
     // F19 - entoure le texte de guillemets (et double ceux qu'il contient) pour qu'un ";" ne casse pas les colonnes du CSV
@@ -225,9 +201,7 @@ public class CommandeService {
         dto.setPrixUnitaire(commande.getPrixUnitaire());
         dto.setMontant(commande.getPrixUnitaire().multiply(BigDecimal.valueOf(commande.getQuantite())));
         dto.setStatut(commande.getStatut());
-        dto.setDateCommande(commande.getDateCommande());
         dto.setDateModification(commande.getDateModification());
-        dto.setDateLivraison(commande.getDateLivraison());
         return dto;
     }
 }

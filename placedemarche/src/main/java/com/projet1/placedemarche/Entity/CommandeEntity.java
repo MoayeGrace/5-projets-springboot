@@ -4,13 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "commande")
@@ -41,19 +38,8 @@ public class CommandeEntity {
     @Column(nullable = false, length = 20)
     private StatutCommande statut = StatutCommande.EN_ATTENTE;
 
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime dateCommande;
-
+    // F13 - date de la dernière modification (création ou changement de statut), remise à jour à chaque enregistrement
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime dateModification;
-
-    // F17 - date du passage à LIVREE : sert à calculer le chiffre d'affaires du mois de livraison
-    private LocalDateTime dateLivraison;
-
-    // F13 - historique des changements de statut ; cascade ALL : enregistré et supprimé avec la commande
-    @OneToMany(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("dateChangement ASC")
-    private List<HistoriqueStatutEntity> historique = new ArrayList<>();
 }

@@ -26,7 +26,5 @@ public class CommandeResponseDTO {
     private BigDecimal montant;
 
     private StatutCommande statut;
-    private LocalDateTime dateCommande;
-    private LocalDateTime dateModification;
-    private LocalDateTime dateLivraison;   // F17 - remplie au passage à LIVREE
+    private LocalDateTime dateModification;   // F13 - horodatage du dernier changement
 }
