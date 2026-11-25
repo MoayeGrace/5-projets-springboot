@@ -44,6 +44,12 @@ public class BulletinController {
         return bulletinService.modifier(id, dto);
     }
 
+    // F14 - POST /bulletins/{id}/edition : édite et verrouille le bulletin (200, 400, 404 ou 409)
+    @PostMapping("/{id}/edition")
+    public BulletinResponseDTO editer(@PathVariable Long id) {
+        return bulletinService.editer(id);
+    }
+
     // DELETE /bulletins/{id} : suppression d'un bulletin généré à tort (204, ou 404)
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

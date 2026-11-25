@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -22,5 +23,6 @@ public class BulletinResponseDTO {
     private BigDecimal net;
     private BigDecimal retenues;              // F13
     private boolean edite;
+    private LocalDateTime dateEdition;        // F14
     private List<LigneBulletinDTO> lignes;    // F13 : détail du calcul, ligne par ligne
 }

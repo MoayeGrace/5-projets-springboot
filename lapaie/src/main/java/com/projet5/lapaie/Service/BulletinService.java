@@ -29,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
@@ -164,9 +165,34 @@ public class BulletinService {
         bulletin.getLignes().add(ligne);
     }
 
-    // PUT /bulletins/{id} : corrige le brut et/ou le net d'un bulletin (404 si introuvable)
+    // F14 - POST /bulletins/{id}/edition : fige le bulletin remis à l'employé ; il doit être complet (calculé) et son net
+    // positif (400), et ne pas être déjà édité (409). Les taux sont déjà figés dans ses lignes
+    public BulletinResponseDTO editer(Long id) {
+        BulletinEntity bulletin = trouverOu404(bulletinRepository, id, "Bulletin");
+        if (bulletin.getEdite()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le bulletin " + id + " est déjà édité");
+        }
+        if (bulletin.getLignes().isEmpty() || bulletin.getNet().signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Le bulletin " + id + " est incomplet : il doit être calculé et son net doit être positif");
+        }
+        bulletin.setEdite(true);
+        bulletin.setDateEdition(LocalDateTime.now());
+        return entityVersResponseDTO(bulletinRepository.save(bulletin));
+    }
+
+    // F14 - un bulletin édité n'est plus modifiable ni supprimable (409)
+    private void verifierNonEdite(BulletinEntity bulletin) {
+        if (bulletin.getEdite()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le bulletin " + bulletin.getId() + " est édité : il ne peut plus être modifié ni supprimé");
+        }
+    }
+
+    // PUT /bulletins/{id} : corrige le brut et/ou le net d'un bulletin avant édition (404 si introuvable, 409 si édité)
     public BulletinResponseDTO modifier(Long id, BulletinRequestDTO dto) {
         BulletinEntity bulletin = trouverOu404(bulletinRepository, id, "Bulletin");
+        verifierNonEdite(bulletin);   // F14
         if (dto.getBrut() != null) {
             bulletin.setBrut(dto.getBrut());
         }
@@ -176,9 +202,11 @@ public class BulletinService {
         return entityVersResponseDTO(bulletinRepository.save(bulletin));
     }
 
-    // DELETE /bulletins/{id} : vérifie que l'élément existe (404 sinon), puis le supprime
+    // DELETE /bulletins/{id} : vérifie que le bulletin existe (404 sinon) et n'est pas édité (409), puis le supprime
     public void supprimer(Long id) {
-        bulletinRepository.delete(trouverOu404(bulletinRepository, id, "Bulletin"));
+        BulletinEntity bulletin = trouverOu404(bulletinRepository, id, "Bulletin");
+        verifierNonEdite(bulletin);   // F14
+        bulletinRepository.delete(bulletin);
     }
 
     // Entity -> DTO (avec le détail des lignes)
@@ -190,6 +218,7 @@ public class BulletinService {
         dto.setNet(bulletin.getNet());
         dto.setRetenues(bulletin.getRetenues());   // F13
         dto.setEdite(bulletin.getEdite());
+        dto.setDateEdition(bulletin.getDateEdition());   // F14
         dto.setEmployeId(bulletin.getEmploye().getId());
         dto.setEmployeNom(bulletin.getEmploye().getNom());
         dto.setLignes(bulletin.getLignes().stream().map(this::ligneVersDTO).toList());   // F13

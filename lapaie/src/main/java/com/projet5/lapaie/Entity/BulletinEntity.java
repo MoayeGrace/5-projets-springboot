@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,4 +48,7 @@ public class BulletinEntity {
     // Vrai une fois le bulletin édité (remis à l'employé) : il n'est plus modifiable
     @Column(nullable = false)
     private Boolean edite = false;
+
+    // F14 - date et heure de l'édition
+    private LocalDateTime dateEdition;
 }
