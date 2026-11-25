@@ -59,12 +59,18 @@ public class GestionnaireErreurs {
     public ResponseEntity<ErreurResponseDTO> conflit(DataIntegrityViolationException ex) {
         String cause = String.valueOf(ex.getMostSpecificCause().getMessage());
         String message;
-        if (cause.contains("Duplicate entry")) {
-            message = "Cette valeur existe déjà (référence, code, matricule ou ligne de nomenclature déjà saisis)";
+        if (cause.contains("uk_article_reference")) {
+            message = "Cette référence d'article est déjà utilisée";
+        } else if (cause.contains("uk_machine_code")) {
+            message = "Ce code machine est déjà utilisé";
+        } else if (cause.contains("uk_operateur_matricule")) {
+            message = "Ce matricule d'opérateur est déjà utilisé";
+        } else if (cause.contains("Duplicate entry")) {
+            message = "Cette valeur existe déjà";
         } else if (cause.contains("foreign key")) {
             message = "Opération impossible : cet élément est encore utilisé par d'autres données";
         } else {
-            message = "Opération refusée par la base de données";
+            message = "Opération refusée par la base de données : " + cause;
         }
         return reponse(HttpStatus.CONFLICT, message, null);
     }
