@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,5 +20,7 @@ public class BulletinResponseDTO {
     private String mois;
     private BigDecimal brut;
     private BigDecimal net;
+    private BigDecimal retenues;              // F13
     private boolean edite;
+    private List<LigneBulletinDTO> lignes;    // F13 : détail du calcul, ligne par ligne
 }

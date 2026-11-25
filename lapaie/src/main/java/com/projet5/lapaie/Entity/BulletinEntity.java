@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "bulletin",
@@ -32,6 +34,15 @@ public class BulletinEntity {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal net;
+
+    // F13 - total des retenues (cotisations)
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal retenues = BigDecimal.ZERO;
+
+    // F13 - lignes du calcul ; cascade ALL : enregistrées et supprimées avec le bulletin
+    @OneToMany(mappedBy = "bulletin", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("ordre ASC")
+    private List<LigneBulletinEntity> lignes = new ArrayList<>();
 
     // Vrai une fois le bulletin édité (remis à l'employé) : il n'est plus modifiable
     @Column(nullable = false)

@@ -2,17 +2,36 @@ package com.projet5.lapaie.Service;
 
 import com.projet5.lapaie.DTO.BulletinRequestDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
+import com.projet5.lapaie.DTO.LigneBulletinDTO;
 import com.projet5.lapaie.DTO.PageResponseDTO;
+import com.projet5.lapaie.Entity.AbsenceEntity;
+import com.projet5.lapaie.Entity.Assiette;
 import com.projet5.lapaie.Entity.BulletinEntity;
+import com.projet5.lapaie.Entity.ContratEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
+import com.projet5.lapaie.Entity.LigneBulletinEntity;
+import com.projet5.lapaie.Entity.RubriqueEntity;
+import com.projet5.lapaie.Entity.TypeAbsence;
+import com.projet5.lapaie.Entity.TypeRubrique;
+import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.BulletinRepository;
+import com.projet5.lapaie.Repository.ContratRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
+import com.projet5.lapaie.Repository.RubriqueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.projet5.lapaie.Service.ServiceUtils.trouverOu404;
@@ -23,6 +42,9 @@ public class BulletinService {
 
     private final BulletinRepository bulletinRepository;
     private final EmployeRepository employeRepository;
+    private final ContratRepository contratRepository;     // F13
+    private final AbsenceRepository absenceRepository;     // F13
+    private final RubriqueRepository rubriqueRepository;   // F13
 
     // F10 - taille de page maximale autorisée
     private static final int TAILLE_PAGE_MAX = 200;
@@ -50,17 +72,107 @@ public class BulletinService {
                 .toList();
     }
 
-    // POST /bulletins : établit un nouveau bulletin (INSERT)
+    // F13 - POST /bulletins : calcule le bulletin de l'employé pour le mois, sans saisie manuelle.
+    // 409 s'il existe déjà, 400 si aucun contrat n'est actif ce mois-là
+    @Transactional
     public BulletinResponseDTO creer(BulletinRequestDTO dto) {
+        EmployeEntity employe = trouverOu404(employeRepository, dto.getEmployeId(), "Employé");
+        YearMonth mois = YearMonth.parse(dto.getMois());
+        if (bulletinRepository.existsByEmployeIdAndMois(employe.getId(), dto.getMois())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Un bulletin existe déjà pour " + employe.getNom() + " en " + dto.getMois());
+        }
+        ContratEntity contrat = contratActif(employe.getId(), mois);
+
         BulletinEntity bulletin = new BulletinEntity();
-        dtoVersEntity(dto, bulletin);
+        bulletin.setEmploye(employe);
+        bulletin.setMois(dto.getMois());
+        calculer(bulletin, contrat, mois);
         return entityVersResponseDTO(bulletinRepository.save(bulletin));
     }
 
-    // PUT /bulletins/{id} : charge l'élément existant (404 sinon), remplace ses champs, puis UPDATE
+    // F13 - le contrat qui couvre au moins un jour du mois (le plus récent s'il y en a plusieurs) ; 400 s'il n'y en a aucun
+    private ContratEntity contratActif(Long employeId, YearMonth mois) {
+        return contratRepository.findByEmployeId(employeId).stream()
+                .filter(c -> c.chevauche(mois.atDay(1), mois.atEndOfMonth()))
+                .max(Comparator.comparing(ContratEntity::getDateDebut))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Aucun contrat actif pour cet employé en " + mois));
+    }
+
+    // F13 - calcul ligne par ligne : salaire de base du contrat, réduction pour absences non rémunérées au prorata
+    // des jours, puis rubriques dans leur ordre de calcul (gains -> brut, retenues -> retenues) ; net = brut - retenues
+    private void calculer(BulletinEntity bulletin, ContratEntity contrat, YearMonth mois) {
+        BigDecimal base = contrat.getSalaireBase();
+        BigDecimal brut = base;
+        BigDecimal retenues = BigDecimal.ZERO;
+        ajouterLigne(bulletin, "SALAIRE_BASE", "Salaire de base (" + contrat.getPoste() + ")", TypeRubrique.GAIN, null, null, base);
+
+        long joursNonPayes = joursSansSolde(bulletin.getEmploye().getId(), mois);
+        if (joursNonPayes > 0) {
+            BigDecimal reduction = base.multiply(BigDecimal.valueOf(joursNonPayes))
+                    .divide(BigDecimal.valueOf(mois.lengthOfMonth()), 2, RoundingMode.HALF_UP);
+            brut = brut.subtract(reduction);
+            ajouterLigne(bulletin, "ABSENCE", "Absence non rémunérée (" + joursNonPayes + " j)", TypeRubrique.GAIN,
+                    null, null, reduction.negate());
+        }
+
+        for (RubriqueEntity rubrique : rubriqueRepository.findAllByOrderByOrdreCalculAscCodeAsc()) {
+            BigDecimal assiette = (rubrique.getAssiette() == Assiette.BRUT) ? brut : base;   // dépend des lignes précédentes
+            BigDecimal montant = assiette.multiply(rubrique.getTaux())
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            if (rubrique.getType() == TypeRubrique.GAIN) {
+                brut = brut.add(montant);
+            } else {
+                retenues = retenues.add(montant);
+            }
+            ajouterLigne(bulletin, rubrique.getCode(), rubrique.getLibelle(), rubrique.getType(), assiette, rubrique.getTaux(), montant);
+        }
+
+        bulletin.setBrut(brut);
+        bulletin.setRetenues(retenues);
+        bulletin.setNet(brut.subtract(retenues));
+    }
+
+    // F13 - jours d'absence SANS_SOLDE de l'employé compris dans le mois
+    private long joursSansSolde(Long employeId, YearMonth mois) {
+        LocalDate debutMois = mois.atDay(1);
+        LocalDate finMois = mois.atEndOfMonth();
+        long jours = 0;
+        for (AbsenceEntity absence : absenceRepository.findByEmployeId(employeId)) {
+            if (absence.getType() == TypeAbsence.SANS_SOLDE && absence.chevauche(debutMois, finMois)) {
+                LocalDate debut = absence.getDateDebut().isBefore(debutMois) ? debutMois : absence.getDateDebut();
+                LocalDate fin = absence.getDateFin().isAfter(finMois) ? finMois : absence.getDateFin();
+                jours += ChronoUnit.DAYS.between(debut, fin) + 1;
+            }
+        }
+        return jours;
+    }
+
+    // F13 - ajoute une ligne au bulletin, à la suite des précédentes
+    private void ajouterLigne(BulletinEntity bulletin, String code, String libelle, TypeRubrique type,
+                              BigDecimal base, BigDecimal taux, BigDecimal montant) {
+        LigneBulletinEntity ligne = new LigneBulletinEntity();
+        ligne.setBulletin(bulletin);
+        ligne.setOrdre(bulletin.getLignes().size() + 1);
+        ligne.setCode(code);
+        ligne.setLibelle(libelle);
+        ligne.setType(type);
+        ligne.setBase(base);
+        ligne.setTaux(taux);
+        ligne.setMontant(montant);
+        bulletin.getLignes().add(ligne);
+    }
+
+    // PUT /bulletins/{id} : corrige le brut et/ou le net d'un bulletin (404 si introuvable)
     public BulletinResponseDTO modifier(Long id, BulletinRequestDTO dto) {
         BulletinEntity bulletin = trouverOu404(bulletinRepository, id, "Bulletin");
-        dtoVersEntity(dto, bulletin);
+        if (dto.getBrut() != null) {
+            bulletin.setBrut(dto.getBrut());
+        }
+        if (dto.getNet() != null) {
+            bulletin.setNet(dto.getNet());
+        }
         return entityVersResponseDTO(bulletinRepository.save(bulletin));
     }
 
@@ -69,26 +181,31 @@ public class BulletinService {
         bulletinRepository.delete(trouverOu404(bulletinRepository, id, "Bulletin"));
     }
 
-    // DTO -> Entity (employeId est transformé en objet, 404 s'il n'existe pas)
-    private void dtoVersEntity(BulletinRequestDTO dto, BulletinEntity bulletin) {
-        EmployeEntity employe = trouverOu404(employeRepository, dto.getEmployeId(), "Employé");
-
-        bulletin.setMois(dto.getMois());
-        bulletin.setBrut(dto.getBrut());
-        bulletin.setNet(dto.getNet());
-        bulletin.setEmploye(employe);
-    }
-
-    // Entity -> DTO
+    // Entity -> DTO (avec le détail des lignes)
     private BulletinResponseDTO entityVersResponseDTO(BulletinEntity bulletin) {
         BulletinResponseDTO dto = new BulletinResponseDTO();
         dto.setId(bulletin.getId());
         dto.setMois(bulletin.getMois());
         dto.setBrut(bulletin.getBrut());
         dto.setNet(bulletin.getNet());
+        dto.setRetenues(bulletin.getRetenues());   // F13
         dto.setEdite(bulletin.getEdite());
         dto.setEmployeId(bulletin.getEmploye().getId());
         dto.setEmployeNom(bulletin.getEmploye().getNom());
+        dto.setLignes(bulletin.getLignes().stream().map(this::ligneVersDTO).toList());   // F13
+        return dto;
+    }
+
+    // F13 - Entity -> DTO pour une ligne du bulletin
+    private LigneBulletinDTO ligneVersDTO(LigneBulletinEntity ligne) {
+        LigneBulletinDTO dto = new LigneBulletinDTO();
+        dto.setOrdre(ligne.getOrdre());
+        dto.setCode(ligne.getCode());
+        dto.setLibelle(ligne.getLibelle());
+        dto.setType(ligne.getType());
+        dto.setBase(ligne.getBase());
+        dto.setTaux(ligne.getTaux());
+        dto.setMontant(ligne.getMontant());
         return dto;
     }
 }

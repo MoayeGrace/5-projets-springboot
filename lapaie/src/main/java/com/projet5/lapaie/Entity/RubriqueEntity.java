@@ -32,4 +32,13 @@ public class RubriqueEntity {
     // Taux en pourcentage (ex : 6.3000 pour 6,3 %)
     @Column(nullable = false, precision = 7, scale = 4)
     private BigDecimal taux;
+
+    // F13 - rang de la rubrique dans le calcul du bulletin (1 = appliquée en premier)
+    @Column(nullable = false)
+    private Integer ordreCalcul = 0;
+
+    // F13 - montant sur lequel s'applique le taux
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Assiette assiette = Assiette.SALAIRE_BASE;
 }

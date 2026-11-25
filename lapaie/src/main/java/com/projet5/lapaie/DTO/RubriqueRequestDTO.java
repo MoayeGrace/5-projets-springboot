@@ -1,5 +1,6 @@
 package com.projet5.lapaie.DTO;
 
+import com.projet5.lapaie.Entity.Assiette;
 import com.projet5.lapaie.Entity.TypeRubrique;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,4 +31,12 @@ public class RubriqueRequestDTO {
     @NotNull(message = "Le taux est obligatoire")
     @PositiveOrZero(message = "Le taux ne peut pas être négatif")
     private BigDecimal taux;
+
+    // F13 - rang dans le calcul du bulletin
+    @NotNull(message = "L'ordre de calcul est obligatoire")
+    @PositiveOrZero(message = "L'ordre de calcul ne peut pas être négatif")
+    private Integer ordreCalcul;
+
+    // F13 - SALAIRE_BASE ou BRUT ; facultatif (SALAIRE_BASE si absent)
+    private Assiette assiette;
 }

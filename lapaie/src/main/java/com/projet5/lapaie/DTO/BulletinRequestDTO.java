@@ -21,10 +21,9 @@ public class BulletinRequestDTO {
     @Pattern(regexp = "\\d{4}-(0[1-9]|1[0-2])", message = "Le mois doit être au format AAAA-MM")
     private String mois;
 
-    @NotNull(message = "Le brut est obligatoire")
+    // F13 - à la création, brut et net sont calculés (ces champs sont ignorés) ; en modification, ils corrigent un montant
     @PositiveOrZero(message = "Le brut ne peut pas être négatif")
     private BigDecimal brut;
 
-    @NotNull(message = "Le net est obligatoire")
     private BigDecimal net;
 }
