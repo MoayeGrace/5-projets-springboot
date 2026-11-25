@@ -34,7 +34,9 @@ public class ClotureService {
     @Transactional
     public ClotureResponseDTO cloturer(String mois) {
         YearMonth periode = lireMois(mois);
-        verifierMoisOuvert(mois);
+        if (bulletinRepository.existsByMoisAndEtat(mois, EtatBulletin.CLOTURE)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le mois " + mois + " est déjà clôturé");
+        }
 
         List<String> sansBulletinEdite = new ArrayList<>();
         List<BulletinEntity> edites = new ArrayList<>();
