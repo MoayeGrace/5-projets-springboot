@@ -1,22 +1,38 @@
 package com.projet5.lapaie.Service;
 
 import com.projet5.lapaie.DTO.MasseSalarialeDTO;
+import com.projet5.lapaie.DTO.SoldeCongesDTO;
+import com.projet5.lapaie.Entity.AbsenceEntity;
 import com.projet5.lapaie.Entity.BulletinEntity;
+import com.projet5.lapaie.Entity.EmployeEntity;
+import com.projet5.lapaie.Entity.TypeAbsence;
+import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.BulletinRepository;
+import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.TreeMap;
+
+import static com.projet5.lapaie.Service.ServiceUtils.trouverOu404;
 
 @Service
 @RequiredArgsConstructor
 public class StatistiqueService {
 
+    // F18 - jours de congé acquis par mois complet travaillé
+    private static final BigDecimal JOURS_ACQUIS_PAR_MOIS = new BigDecimal("2.5");
+
     private final BulletinRepository bulletinRepository;
+    private final EmployeRepository employeRepository;   // F18
+    private final AbsenceRepository absenceRepository;   // F18
 
     // F17 - GET /bulletins/masse-salariale?mois= : somme des bruts, retenues et nets du mois (en cours par défaut),
     // par service et au total ; les bulletins non édités sont inclus mais signalés comme provisoires
@@ -37,6 +53,34 @@ public class StatistiqueService {
             ajouter(dto.getTotal(), bulletin);
         }
         dto.getServices().addAll(parService.values());
+        return dto;
+    }
+
+    // F18 - GET /employes/{id}/solde-conges?date= : jours acquis (2,5 par mois complet depuis l'embauche) moins jours de
+    // congé payé consommés jusqu'à la date (aujourd'hui par défaut) ; un solde négatif est renvoyé tel quel et signalé
+    public SoldeCongesDTO soldeConges(Long employeId, LocalDate date) {
+        EmployeEntity employe = trouverOu404(employeRepository, employeId, "Employé");
+        LocalDate jour = (date != null) ? date : LocalDate.now();
+
+        long mois = Math.max(0, ChronoUnit.MONTHS.between(employe.getDateEmbauche(), jour));
+        BigDecimal acquis = JOURS_ACQUIS_PAR_MOIS.multiply(BigDecimal.valueOf(mois));
+        long consommes = 0;
+        for (AbsenceEntity absence : absenceRepository.findByEmployeId(employeId)) {
+            if (absence.getType() == TypeAbsence.CONGE_PAYE && !absence.getDateDebut().isAfter(jour)) {
+                LocalDate fin = absence.getDateFin().isAfter(jour) ? jour : absence.getDateFin();
+                consommes += ChronoUnit.DAYS.between(absence.getDateDebut(), fin) + 1;
+            }
+        }
+
+        SoldeCongesDTO dto = new SoldeCongesDTO();
+        dto.setEmployeId(employe.getId());
+        dto.setEmployeNom(employe.getNom());
+        dto.setDate(jour);
+        dto.setMoisTravailles(mois);
+        dto.setJoursAcquis(acquis);
+        dto.setJoursConsommes(consommes);
+        dto.setSolde(acquis.subtract(BigDecimal.valueOf(consommes)));
+        dto.setSoldeNegatif(dto.getSolde().signum() < 0);
         return dto;
     }
 

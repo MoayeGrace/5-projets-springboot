@@ -5,10 +5,12 @@ import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.ContratResponseDTO;
 import com.projet5.lapaie.DTO.EmployeRequestDTO;
 import com.projet5.lapaie.DTO.EmployeResponseDTO;
+import com.projet5.lapaie.DTO.SoldeCongesDTO;
 import com.projet5.lapaie.Service.AbsenceService;
 import com.projet5.lapaie.Service.BulletinService;
 import com.projet5.lapaie.Service.ContratService;
 import com.projet5.lapaie.Service.EmployeService;
+import com.projet5.lapaie.Service.StatistiqueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,6 +29,14 @@ public class EmployeController {
     private final ContratService contratService;   // F6
     private final BulletinService bulletinService; // F7
     private final AbsenceService absenceService;   // F8
+    private final StatistiqueService statistiqueService;   // F18
+
+    // F18 - GET /employes/{id}/solde-conges?date=2026-11-30 : jours acquis, consommés et solde (200, ou 404)
+    @GetMapping("/{id}/solde-conges")
+    public SoldeCongesDTO soldeConges(@PathVariable Long id,
+                                      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return statistiqueService.soldeConges(id, date);
+    }
 
     // F8 - GET /employes/{id}/absences?du=2026-11-01&au=2026-11-30 : absences de la période, mois en cours par défaut (200, 400 ou 404)
     @GetMapping("/{id}/absences")
