@@ -13,4 +13,7 @@ public interface AbsenceRepository extends JpaRepository<AbsenceEntity, Long> {
     // F8 : absences d'un employé qui touchent la période [du, au] (même partiellement), de la plus récente à la plus ancienne
     List<AbsenceEntity> findByEmployeIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqualOrderByDateDebutDesc(
             Long employeId, LocalDate au, LocalDate du);
+
+    // F12 : toutes les absences d'un employé
+    List<AbsenceEntity> findByEmployeId(Long employeId);
 }

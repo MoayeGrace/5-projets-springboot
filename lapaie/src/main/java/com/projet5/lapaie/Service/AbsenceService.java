@@ -56,14 +56,31 @@ public class AbsenceService {
 
     // POST /absences : saisit une nouvelle absence (INSERT)
     public AbsenceResponseDTO creer(AbsenceRequestDTO dto) {
+        verifierPeriodeLibre(dto, null);   // F12
         AbsenceEntity absence = new AbsenceEntity();
         dtoVersEntity(dto, absence);
         return entityVersResponseDTO(absenceRepository.save(absence));
     }
 
+    // F12 - aucune autre absence de l'employé ne doit recouvrir la période (409 citant l'absence, son type et ses dates) ;
+    // deux absences contiguës sont acceptées
+    private void verifierPeriodeLibre(AbsenceRequestDTO dto, Long idExclu) {
+        if (dto.getDateFin().isBefore(dto.getDateDebut())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de fin précède la date de début");
+        }
+        for (AbsenceEntity autre : absenceRepository.findByEmployeId(dto.getEmployeId())) {
+            if (!autre.getId().equals(idExclu) && autre.chevauche(dto.getDateDebut(), dto.getDateFin())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Période en conflit avec l'absence " + autre.getId() + " (" + autre.getType() + " du "
+                                + autre.getDateDebut() + " au " + autre.getDateFin() + ")");
+            }
+        }
+    }
+
     // PUT /absences/{id} : charge l'élément existant (404 sinon), remplace ses champs, puis UPDATE
     public AbsenceResponseDTO modifier(Long id, AbsenceRequestDTO dto) {
         AbsenceEntity absence = trouverOu404(absenceRepository, id, "Absence");
+        verifierPeriodeLibre(dto, id);     // F12 - une date corrigée ne doit pas créer de chevauchement
         dtoVersEntity(dto, absence);
         return entityVersResponseDTO(absenceRepository.save(absence));
     }

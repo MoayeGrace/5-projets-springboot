@@ -37,6 +37,11 @@ public class AbsenceEntity {
     @Column(length = 255)
     private String motif;
 
+    // F12 - vrai si l'absence a au moins un jour en commun avec la période [debut, fin] (bornes incluses)
+    public boolean chevauche(LocalDate debut, LocalDate fin) {
+        return !dateDebut.isAfter(fin) && !dateFin.isBefore(debut);
+    }
+
     // F8 - durée en jours calendaires, premier et dernier jour inclus
     public long dureeJours() {
         return ChronoUnit.DAYS.between(dateDebut, dateFin) + 1;
