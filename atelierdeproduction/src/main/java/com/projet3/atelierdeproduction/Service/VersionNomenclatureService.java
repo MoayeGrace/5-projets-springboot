@@ -58,10 +58,15 @@ public class VersionNomenclatureService {
     }
 
     // F15 - POST /articles/{id}/nomenclature/version : recopie la version en vigueur dans une nouvelle version en préparation,
-    // que l'on modifie ensuite avec /nomenclatures (409 si une version est déjà en préparation ou s'il n'y a rien à versionner)
+    // que l'on modifie ensuite avec /nomenclatures (400 pour un article acheté, 409 si une version est déjà en préparation
+    // ou s'il n'y a rien à versionner)
     @Transactional
     public VersionNomenclatureDTO ouvrirVersion(Long articleId) {
         ArticleEntity article = trouverOu404(articleRepository, articleId, "Article");
+        if (article.getType() != TypeArticle.FABRIQUE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "L'article " + article.getReference() + " est acheté : il n'a pas de nomenclature");
+        }
         Integer enPreparation = ligneRepository.versionEnPreparation(articleId);
         if (enPreparation != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
