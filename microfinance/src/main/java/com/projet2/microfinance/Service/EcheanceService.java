@@ -147,21 +147,38 @@ public class EcheanceService {
         return entityVersResponseDTO(echeanceRepository.save(echeance));
     }
 
-    // PUT /echeances/{id} : charge l'échéance existante (404 sinon), corrige ses montants, puis UPDATE
+    // PUT /echeances/{id} : charge l'échéance existante (404 sinon), corrige ses montants, puis UPDATE ; une échéance
+    // déjà payée ne change pas de prêt et ses montants ne descendent pas sous ce qui a été payé (409)
     public EcheanceResponseDTO modifier(Long id, EcheanceRequestDTO dto) {
         EcheanceEntity echeance = trouverOu404(echeanceRepository, id, "Échéance");
+        if (echeance.montantPaye().signum() > 0
+                && (!echeance.getPret().getId().equals(dto.getPretId())
+                    || dto.getMontantCapital().compareTo(echeance.getCapitalPaye()) < 0
+                    || dto.getMontantInterets().compareTo(echeance.getInteretsPaye()) < 0)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "L'échéance " + id + " est déjà payée (capital " + echeance.getCapitalPaye() + ", intérêts "
+                            + echeance.getInteretsPaye() + ") : elle ne change pas de prêt et ses montants ne peuvent pas descendre sous le payé");
+        }
         dtoVersEntity(dto, echeance);
         return entityVersResponseDTO(echeanceRepository.save(echeance));
     }
 
-    // DELETE /echeances/{id} : vérifie que l'échéance existe (404 sinon), puis la supprime
+    // DELETE /echeances/{id} : supprime une échéance (404 si elle n'existe pas, 409 si un paiement y est déjà imputé)
     public void supprimer(Long id) {
-        echeanceRepository.delete(trouverOu404(echeanceRepository, id, "Échéance"));
+        EcheanceEntity echeance = trouverOu404(echeanceRepository, id, "Échéance");
+        if (echeance.montantPaye().signum() > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "L'échéance " + id + " a déjà reçu " + echeance.montantPaye() + " : supprimez d'abord les paiements imputés");
+        }
+        echeanceRepository.delete(echeance);
     }
 
     // DTO -> Entity (pretId est transformé en objet, 404 s'il n'existe pas ; le total est calculé)
     private void dtoVersEntity(EcheanceRequestDTO dto, EcheanceEntity echeance) {
         PretEntity pret = trouverOu404(pretRepository, dto.getPretId(), "Prêt");
+        if (pret.getStatut() == StatutPret.SOLDE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le prêt " + pret.getId() + " est soldé : son échéancier ne change plus");
+        }
 
         echeance.setDateEcheance(dto.getDateEcheance());
         echeance.setCapital(dto.getMontantCapital());
