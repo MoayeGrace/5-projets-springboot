@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,13 +28,15 @@ public class DeploiementService {
     private final VersionNomenclatureService versionNomenclatureService;
 
     // F14 / F18 - quantité totale de chaque composant ACHETE nécessaire pour produire "quantite" unités de l'article ;
-    // "version" fixe la version du premier niveau (celle d'un ordre lancé), null = version en vigueur
-    public Map<ArticleEntity, BigDecimal> besoinsAchetables(ArticleEntity article, BigDecimal quantite, Integer version) {
+    // "version" fixe la version du premier niveau (celle d'un ordre lancé), null = version en vigueur ;
+    // les sous-ensembles prennent la version applicable à la date donnée
+    public Map<ArticleEntity, BigDecimal> besoinsAchetables(ArticleEntity article, BigDecimal quantite, Integer version,
+                                                            LocalDate dateSousEnsembles) {
         List<LigneNomenclatureEntity> lignes = (version != null)
                 ? versionNomenclatureService.lignesDeLaVersion(article.getId(), version)
-                : versionNomenclatureService.lignesEnVigueur(article.getId());
+                : versionNomenclatureService.lignesApplicables(article.getId(), dateSousEnsembles);
         Map<ArticleEntity, BigDecimal> besoins = new LinkedHashMap<>();
-        cumulerBesoins(lignes, quantite, besoins);
+        cumulerBesoins(lignes, quantite, besoins, dateSousEnsembles);
         return besoins;
     }
 
@@ -44,7 +47,7 @@ public class DeploiementService {
         NomenclatureCompleteDTO dto = new NomenclatureCompleteDTO();
         dto.setArbre(construireNoeud(article, BigDecimal.ONE, 0));
         dto.setProfondeur(profondeur(dto.getArbre()));
-        besoinsAchetables(article, BigDecimal.ONE, null).forEach((composant, quantite) -> {
+        besoinsAchetables(article, BigDecimal.ONE, null, LocalDate.now()).forEach((composant, quantite) -> {
             NomenclatureCompleteDTO.Besoin besoin = new NomenclatureCompleteDTO.Besoin();
             besoin.setReference(composant.getReference());
             besoin.setLibelle(composant.getLibelle());
@@ -75,14 +78,15 @@ public class DeploiementService {
     }
 
     // F14 - ajoute aux besoins les composants achetés des lignes, en descendant dans les composants fabriqués
-    private void cumulerBesoins(List<LigneNomenclatureEntity> lignes, BigDecimal quantite, Map<ArticleEntity, BigDecimal> besoins) {
+    private void cumulerBesoins(List<LigneNomenclatureEntity> lignes, BigDecimal quantite, Map<ArticleEntity, BigDecimal> besoins,
+                                LocalDate date) {
         for (LigneNomenclatureEntity ligne : lignes) {
             ArticleEntity composant = composant(ligne);
             BigDecimal quantiteComposant = quantite.multiply(ligne.getQuantite());
             if (composant.getType() == TypeArticle.ACHETE) {
                 besoins.merge(composant, quantiteComposant, BigDecimal::add);
             } else {
-                cumulerBesoins(versionNomenclatureService.lignesEnVigueur(composant.getId()), quantiteComposant, besoins);
+                cumulerBesoins(versionNomenclatureService.lignesApplicables(composant.getId(), date), quantiteComposant, besoins, date);
             }
         }
     }

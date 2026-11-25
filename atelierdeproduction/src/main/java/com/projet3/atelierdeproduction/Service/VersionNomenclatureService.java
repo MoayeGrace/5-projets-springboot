@@ -3,8 +3,12 @@ package com.projet3.atelierdeproduction.Service;
 import com.projet3.atelierdeproduction.DTO.VersionNomenclatureDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
 import com.projet3.atelierdeproduction.Entity.LigneNomenclatureEntity;
+import com.projet3.atelierdeproduction.Entity.OrdreFabricationEntity;
+import com.projet3.atelierdeproduction.Entity.StatutOrdre;
+import com.projet3.atelierdeproduction.Entity.TypeArticle;
 import com.projet3.atelierdeproduction.Repository.ArticleRepository;
 import com.projet3.atelierdeproduction.Repository.LigneNomenclatureRepository;
+import com.projet3.atelierdeproduction.Repository.OrdreFabricationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,9 +17,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 
@@ -26,6 +32,7 @@ public class VersionNomenclatureService {
 
     private final LigneNomenclatureRepository ligneRepository;
     private final ArticleRepository articleRepository;
+    private final OrdreFabricationRepository ordreRepository;   // F15
 
     // F15 - numéro de la version en vigueur aujourd'hui (null si l'article n'a pas de nomenclature appliquée)
     public Integer versionEnVigueur(Long articleId) {
@@ -35,6 +42,11 @@ public class VersionNomenclatureService {
     // F15 - lignes de la version en vigueur aujourd'hui (vide si aucune)
     public List<LigneNomenclatureEntity> lignesEnVigueur(Long articleId) {
         return lignesDeLaVersion(articleId, versionEnVigueur(articleId));
+    }
+
+    // F15 - lignes de la version applicable à une date (vide si aucune)
+    public List<LigneNomenclatureEntity> lignesApplicables(Long articleId, LocalDate date) {
+        return lignesDeLaVersion(articleId, ligneRepository.versionApplicable(articleId, date));
     }
 
     // F15 - lignes d'une version donnée, triées par référence du composant (vide si la version est null)
@@ -82,9 +94,42 @@ public class VersionNomenclatureService {
         if (numero == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucune version en préparation pour " + article.getReference());
         }
+        verifierAucunOrdreDependant(article);
         List<LigneNomenclatureEntity> lignes = lignesDeLaVersion(articleId, numero);
         lignes.forEach(ligne -> ligne.setDateApplication(LocalDate.now()));
         return versionVersDTO(article, lignes);
+    }
+
+    // F15 - un ordre lancé (ou terminé aujourd'hui) qui utilise l'article comme sous-ensemble doit garder la version qu'il a
+    // réservée ou consommée : la nouvelle version ne s'applique pas tant qu'il existe (409 citant l'ordre)
+    private void verifierAucunOrdreDependant(ArticleEntity article) {
+        List<OrdreFabricationEntity> ordres = new ArrayList<>(ordreRepository.findByStatutOrderByDatePrevueAsc(StatutOrdre.LANCE));
+        ordres.addAll(ordreRepository.findByStatutAndDateModificationGreaterThanEqual(StatutOrdre.TERMINE, LocalDate.now().atStartOfDay()));
+        for (OrdreFabricationEntity ordre : ordres) {
+            List<LigneNomenclatureEntity> lignes = lignesDeLaVersion(ordre.getArticle().getId(), ordre.getVersionNomenclature());
+            if (contientSousEnsemble(lignes, article.getId(), new HashSet<>())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "La nouvelle version de " + article.getReference() + " ne peut pas s'appliquer : l'ordre " + ordre.getId()
+                                + " (" + ordre.getStatut() + ", " + ordre.getArticle().getReference() + ") l'utilise comme sous-ensemble ; "
+                                + (ordre.getStatut() == StatutOrdre.LANCE
+                                    ? "terminez-le ou annulez-le d'abord"
+                                    : "il a été terminé aujourd'hui avec la version actuelle : la nouvelle pourra s'appliquer demain"));
+            }
+        }
+    }
+
+    // F15 - vrai si l'article cherché est un composant fabriqué des lignes, à n'importe quel niveau
+    private boolean contientSousEnsemble(List<LigneNomenclatureEntity> lignes, Long articleId, Set<Long> vus) {
+        for (LigneNomenclatureEntity ligne : lignes) {
+            ArticleEntity composant = articleRepository.findByReference(ligne.getComposantReference()).orElse(null);
+            if (composant == null || composant.getType() != TypeArticle.FABRIQUE || !vus.add(composant.getId())) {
+                continue;
+            }
+            if (composant.getId().equals(articleId) || contientSousEnsemble(lignesEnVigueur(composant.getId()), articleId, vus)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // F15 - GET /articles/{id}/nomenclature/versions : toutes les versions de l'article, avec leurs lignes

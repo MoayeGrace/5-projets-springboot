@@ -169,9 +169,14 @@ public class OrdreFabricationService {
         return dto;
     }
 
-    // F14 / F18 - composants achetés nécessaires à l'ordre (version figée s'il a été lancé, sinon version en vigueur)
+    // F14 / F18 - composants achetés nécessaires à l'ordre : version figée de l'article s'il a été lancé ; pour les
+    // sous-ensembles, versions en vigueur le jour de sa fin s'il est terminé (ce qui a réellement été consommé), sinon aujourd'hui
     private Map<ArticleEntity, BigDecimal> besoinsDe(OrdreFabricationEntity ordre) {
-        return deploiementService.besoinsAchetables(ordre.getArticle(), ordre.getQuantite(), ordre.getVersionNomenclature());
+        LocalDate dateSousEnsembles = (ordre.getStatut() == StatutOrdre.TERMINE)
+                ? ordre.getDateModification().toLocalDate()
+                : LocalDate.now();
+        return deploiementService.besoinsAchetables(ordre.getArticle(), ordre.getQuantite(),
+                ordre.getVersionNomenclature(), dateSousEnsembles);
     }
 
     // F14 - au lancement : chaque composant acheté doit être disponible en quantité suffisante (409 listant les manques),
