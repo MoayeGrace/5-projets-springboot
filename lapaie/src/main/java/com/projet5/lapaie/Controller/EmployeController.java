@@ -1,8 +1,10 @@
 package com.projet5.lapaie.Controller;
 
+import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.ContratResponseDTO;
 import com.projet5.lapaie.DTO.EmployeRequestDTO;
 import com.projet5.lapaie.DTO.EmployeResponseDTO;
+import com.projet5.lapaie.Service.BulletinService;
 import com.projet5.lapaie.Service.ContratService;
 import com.projet5.lapaie.Service.EmployeService;
 import jakarta.validation.Valid;
@@ -19,6 +21,13 @@ public class EmployeController {
 
     private final EmployeService employeService;
     private final ContratService contratService;   // F6
+    private final BulletinService bulletinService; // F7
+
+    // F7 - GET /employes/{id}/bulletins?annee=2026 : bulletins de l'année par mois décroissant, avec l'état d'édition (200, ou 404)
+    @GetMapping("/{id}/bulletins")
+    public List<BulletinResponseDTO> bulletins(@PathVariable Long id, @RequestParam(required = false) Integer annee) {
+        return bulletinService.listerParEmploye(id, annee);
+    }
 
     // F6 - GET /employes/{id}/contrats : contrats du plus récent au plus ancien, le contrat actif signalé (200, ou 404)
     @GetMapping("/{id}/contrats")

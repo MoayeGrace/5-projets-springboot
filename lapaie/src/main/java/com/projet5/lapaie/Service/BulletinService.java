@@ -9,6 +9,7 @@ import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static com.projet5.lapaie.Service.ServiceUtils.trouverOu404;
@@ -31,6 +32,16 @@ public class BulletinService {
     // GET /bulletins/{id} : récupère un bulletin par son id (404 si introuvable)
     public BulletinResponseDTO detail(Long id) {
         return entityVersResponseDTO(trouverOu404(bulletinRepository, id, "Bulletin"));
+    }
+
+    // F7 - GET /employes/{id}/bulletins?annee= : bulletins de l'année (en cours par défaut), du mois le plus récent au plus ancien
+    public List<BulletinResponseDTO> listerParEmploye(Long employeId, Integer annee) {
+        trouverOu404(employeRepository, employeId, "Employé");
+        int an = (annee != null) ? annee : LocalDate.now().getYear();
+        return bulletinRepository.findByEmployeIdAndMoisStartingWithOrderByMoisDesc(employeId, an + "-")
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
     }
 
     // POST /bulletins : établit un nouveau bulletin (INSERT)
