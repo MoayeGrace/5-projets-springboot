@@ -59,12 +59,22 @@ public class GestionnaireErreurs {
     public ResponseEntity<ErreurResponseDTO> conflit(DataIntegrityViolationException ex) {
         String cause = String.valueOf(ex.getMostSpecificCause().getMessage());
         String message;
-        if (cause.contains("Duplicate entry")) {
-            message = "Cette valeur existe déjà (numéro de ligne, immatriculation, matricule ou permis déjà saisis)";
+        if (cause.contains("uk_ligne_numero")) {
+            message = "Ce numéro de ligne est déjà utilisé";
+        } else if (cause.contains("uk_arret_nom_commune")) {
+            message = "Un arrêt de ce nom existe déjà dans cette commune";
+        } else if (cause.contains("uk_bus_immatriculation")) {
+            message = "Cette immatriculation est déjà utilisée";
+        } else if (cause.contains("uk_conducteur_matricule")) {
+            message = "Ce matricule est déjà utilisé par un autre conducteur";
+        } else if (cause.contains("uk_conducteur_permis")) {
+            message = "Ce numéro de permis est déjà utilisé par un autre conducteur";
+        } else if (cause.contains("Duplicate entry")) {
+            message = "Cette valeur existe déjà";
         } else if (cause.contains("foreign key")) {
             message = "Opération impossible : cet élément est encore utilisé par d'autres données";
         } else {
-            message = "Opération refusée par la base de données";
+            message = "Opération refusée par la base de données : " + cause;
         }
         return reponse(HttpStatus.CONFLICT, message, null);
     }
