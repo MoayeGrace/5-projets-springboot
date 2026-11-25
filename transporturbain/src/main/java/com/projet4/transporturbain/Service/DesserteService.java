@@ -56,10 +56,13 @@ public class DesserteService {
                     "Position " + dto.getPosition() + " impossible : la ligne compte " + trace.size() + " arrêt(s) dans ce sens");
         }
 
-        // F11 - décalage : chaque arrêt à partir de la position demandée recule d'un rang
-        for (DesserteEntity existante : trace) {
+        // F11 - décalage : chaque arrêt à partir de la position demandée recule d'un rang, en partant du dernier et en
+        // écrivant chaque ligne aussitôt, pour ne jamais avoir deux arrêts à la même position (contrainte d'unicité)
+        for (int i = trace.size() - 1; i >= 0; i--) {
+            DesserteEntity existante = trace.get(i);
             if (existante.getPosition() >= dto.getPosition()) {
                 existante.setPosition(existante.getPosition() + 1);
+                desserteRepository.saveAndFlush(existante);
             }
         }
         DesserteEntity nouvelle = new DesserteEntity();
