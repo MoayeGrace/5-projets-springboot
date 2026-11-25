@@ -3,6 +3,8 @@ package com.projet5.lapaie.Controller;
 import com.projet5.lapaie.DTO.BulletinRequestDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.PageResponseDTO;
+import com.projet5.lapaie.DTO.RegularisationRequestDTO;
+import com.projet5.lapaie.DTO.RegularisationResponseDTO;
 import com.projet5.lapaie.Service.BulletinService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +50,13 @@ public class BulletinController {
     @PostMapping("/{id}/edition")
     public BulletinResponseDTO editer(@PathVariable Long id) {
         return bulletinService.editer(id);
+    }
+
+    // F15 - POST /bulletins/{id}/regularisation : { "montant": 15000, "motif": "..." } corrige un bulletin édité (201, 400, 404 ou 409)
+    @PostMapping("/{id}/regularisation")
+    @ResponseStatus(HttpStatus.CREATED)
+    public RegularisationResponseDTO regulariser(@PathVariable Long id, @Valid @RequestBody RegularisationRequestDTO dto) {
+        return bulletinService.regulariser(id, dto);
     }
 
     // DELETE /bulletins/{id} : suppression d'un bulletin généré à tort (204, ou 404)

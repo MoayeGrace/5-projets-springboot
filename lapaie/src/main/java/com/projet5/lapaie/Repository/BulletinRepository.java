@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BulletinRepository extends JpaRepository<BulletinEntity, Long> {
@@ -14,4 +15,7 @@ public interface BulletinRepository extends JpaRepository<BulletinEntity, Long> 
 
     // F13 : vrai si l'employé a déjà un bulletin pour ce mois
     boolean existsByEmployeIdAndMois(Long employeId, String mois);
+
+    // F15 : le premier bulletin non édité de l'employé après un mois donné (les mois AAAA-MM se comparent comme du texte)
+    Optional<BulletinEntity> findFirstByEmployeIdAndMoisGreaterThanAndEditeFalseOrderByMoisAsc(Long employeId, String mois);
 }

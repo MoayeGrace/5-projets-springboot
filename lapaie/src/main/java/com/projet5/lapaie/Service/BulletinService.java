@@ -4,12 +4,15 @@ import com.projet5.lapaie.DTO.BulletinRequestDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.LigneBulletinDTO;
 import com.projet5.lapaie.DTO.PageResponseDTO;
+import com.projet5.lapaie.DTO.RegularisationRequestDTO;
+import com.projet5.lapaie.DTO.RegularisationResponseDTO;
 import com.projet5.lapaie.Entity.AbsenceEntity;
 import com.projet5.lapaie.Entity.Assiette;
 import com.projet5.lapaie.Entity.BulletinEntity;
 import com.projet5.lapaie.Entity.ContratEntity;
 import com.projet5.lapaie.Entity.EmployeEntity;
 import com.projet5.lapaie.Entity.LigneBulletinEntity;
+import com.projet5.lapaie.Entity.RegularisationEntity;
 import com.projet5.lapaie.Entity.RubriqueEntity;
 import com.projet5.lapaie.Entity.TypeAbsence;
 import com.projet5.lapaie.Entity.TypeRubrique;
@@ -17,6 +20,7 @@ import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.BulletinRepository;
 import com.projet5.lapaie.Repository.ContratRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
+import com.projet5.lapaie.Repository.RegularisationRepository;
 import com.projet5.lapaie.Repository.RubriqueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +50,7 @@ public class BulletinService {
     private final ContratRepository contratRepository;     // F13
     private final AbsenceRepository absenceRepository;     // F13
     private final RubriqueRepository rubriqueRepository;   // F13
+    private final RegularisationRepository regularisationRepository;   // F15
 
     // F10 - taille de page maximale autorisée
     private static final int TAILLE_PAGE_MAX = 200;
@@ -89,7 +94,64 @@ public class BulletinService {
         bulletin.setEmploye(employe);
         bulletin.setMois(dto.getMois());
         calculer(bulletin, contrat, mois);
-        return entityVersResponseDTO(bulletinRepository.save(bulletin));
+        bulletinRepository.save(bulletin);
+
+        // F15 - les régularisations en attente sur un mois antérieur sont portées sur ce nouveau bulletin
+        for (RegularisationEntity regularisation : regularisationRepository
+                .findByBulletinOrigineEmployeIdAndBulletinCibleIsNullOrderByIdAsc(employe.getId())) {
+            if (regularisation.getBulletinOrigine().getMois().compareTo(bulletin.getMois()) < 0) {
+                appliquerRegularisation(regularisation, bulletin);
+            }
+        }
+        return entityVersResponseDTO(bulletin);
+    }
+
+    // F15 - POST /bulletins/{id}/regularisation : corrige un bulletin édité sans le toucher ; la régularisation est portée
+    // sur le prochain bulletin non édité de l'employé (ou mise en attente s'il n'existe pas encore). 409 si non édité
+    @Transactional
+    public RegularisationResponseDTO regulariser(Long id, RegularisationRequestDTO dto) {
+        BulletinEntity origine = trouverOu404(bulletinRepository, id, "Bulletin");
+        if (!origine.getEdite()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le bulletin " + id + " n'est pas édité : corrigez-le directement au lieu de le régulariser");
+        }
+        RegularisationEntity regularisation = new RegularisationEntity();
+        regularisation.setBulletinOrigine(origine);
+        regularisation.setMontant(dto.getMontant());
+        regularisation.setMotif(dto.getMotif());
+        regularisationRepository.save(regularisation);
+
+        bulletinRepository.findFirstByEmployeIdAndMoisGreaterThanAndEditeFalseOrderByMoisAsc(
+                        origine.getEmploye().getId(), origine.getMois())
+                .ifPresent(suivant -> appliquerRegularisation(regularisation, suivant));
+        return regularisationVersDTO(regularisation);
+    }
+
+    // F15 - ajoute la ligne de régularisation (avec la référence au bulletin corrigé) et met à jour brut et net
+    private void appliquerRegularisation(RegularisationEntity regularisation, BulletinEntity cible) {
+        ajouterLigne(cible, "REGULARISATION",
+                "Régularisation du bulletin " + regularisation.getBulletinOrigine().getMois()
+                        + " (n°" + regularisation.getBulletinOrigine().getId() + ") : " + regularisation.getMotif(),
+                TypeRubrique.GAIN, null, null, regularisation.getMontant());
+        cible.setBrut(cible.getBrut().add(regularisation.getMontant()));
+        cible.setNet(cible.getNet().add(regularisation.getMontant()));
+        regularisation.setBulletinCible(cible);
+    }
+
+    // F15 - Entity -> DTO
+    private RegularisationResponseDTO regularisationVersDTO(RegularisationEntity regularisation) {
+        RegularisationResponseDTO dto = new RegularisationResponseDTO();
+        dto.setId(regularisation.getId());
+        dto.setBulletinOrigineId(regularisation.getBulletinOrigine().getId());
+        dto.setMoisOrigine(regularisation.getBulletinOrigine().getMois());
+        dto.setMontant(regularisation.getMontant());
+        dto.setMotif(regularisation.getMotif());
+        dto.setEnAttente(regularisation.getBulletinCible() == null);
+        if (regularisation.getBulletinCible() != null) {
+            dto.setBulletinCibleId(regularisation.getBulletinCible().getId());
+            dto.setMoisCible(regularisation.getBulletinCible().getMois());
+        }
+        return dto;
     }
 
     // F13 - le contrat qui couvre au moins un jour du mois (le plus récent s'il y en a plusieurs) ; 400 s'il n'y en a aucun
