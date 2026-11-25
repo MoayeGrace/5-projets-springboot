@@ -48,10 +48,11 @@ public class EmployeController {
         return contratService.listerParEmploye(id);
     }
 
-    // GET /employes : effectif (200)
+    // F9 - GET /employes?matricule=EMP00&service=TECHNIQUE : recherche par critères facultatifs et combinables (200)
     @GetMapping
-    public List<EmployeResponseDTO> lister() {
-        return employeService.lister();
+    public List<EmployeResponseDTO> rechercher(@RequestParam(required = false) String matricule,
+                                               @RequestParam(required = false) String service) {
+        return employeService.rechercher(matricule, service);
     }
 
     // GET /employes/{id} : fiche d'un employé (200, ou 404)

@@ -17,9 +17,11 @@ public class EmployeService {
 
     private final EmployeRepository employeRepository;
 
-    // GET /employes : récupère tout l'effectif
-    public List<EmployeResponseDTO> lister() {
-        return employeRepository.findAll()
+    // F9 - GET /employes?matricule=&service= : employés satisfaisant tous les critères fournis (tout l'effectif sans critère)
+    public List<EmployeResponseDTO> rechercher(String matricule, String service) {
+        String matriculeCherche = (matricule == null || matricule.isBlank()) ? null : matricule.trim();
+        String serviceCherche = (service == null || service.isBlank()) ? null : service.trim();
+        return employeRepository.rechercher(matriculeCherche, serviceCherche)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
