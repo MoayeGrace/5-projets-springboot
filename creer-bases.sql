@@ -1,6 +1,6 @@
 -- Création (ou remise à zéro) des bases de données des cinq projets.
--- Les tables ne sont pas créées ici : Hibernate les génère à partir des entités au démarrage de chaque projet
--- (spring.jpa.hibernate.ddl-auto=update). Lancer ensuite le script donnees/remplir-base.ps1 de chaque projet.
+-- Les tables et les données ne sont pas créées ici : au démarrage de chaque projet, Spring exécute
+-- src/main/resources/schema.sql (tables) puis data.sql (données de test).
 -- Exécution : mysql -u root -p < creer-bases.sql   (ou depuis MySQL Workbench)
 
 DROP DATABASE IF EXISTS place_de_marche;
