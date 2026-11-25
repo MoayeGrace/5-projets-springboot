@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "absence")
@@ -35,4 +36,9 @@ public class AbsenceEntity {
 
     @Column(length = 255)
     private String motif;
+
+    // F8 - durée en jours calendaires, premier et dernier jour inclus
+    public long dureeJours() {
+        return ChronoUnit.DAYS.between(dateDebut, dateFin) + 1;
+    }
 }

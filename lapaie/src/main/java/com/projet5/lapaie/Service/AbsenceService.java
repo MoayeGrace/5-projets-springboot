@@ -7,8 +7,12 @@ import com.projet5.lapaie.Entity.EmployeEntity;
 import com.projet5.lapaie.Repository.AbsenceRepository;
 import com.projet5.lapaie.Repository.EmployeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import static com.projet5.lapaie.Service.ServiceUtils.trouverOu404;
@@ -31,6 +35,23 @@ public class AbsenceService {
     // GET /absences/{id} : récupère une absence par son id (404 si introuvable)
     public AbsenceResponseDTO detail(Long id) {
         return entityVersResponseDTO(trouverOu404(absenceRepository, id, "Absence"));
+    }
+
+    // F8 - GET /employes/{id}/absences?du=&au= : absences touchant la période (mois en cours par défaut), renvoyées
+    // entières même si elles débordent ; de la plus récente à la plus ancienne (400 si "du" est après "au")
+    public List<AbsenceResponseDTO> listerParEmploye(Long employeId, LocalDate du, LocalDate au) {
+        trouverOu404(employeRepository, employeId, "Employé");
+        YearMonth moisCourant = YearMonth.now();
+        LocalDate debut = (du != null) ? du : moisCourant.atDay(1);
+        LocalDate fin = (au != null) ? au : moisCourant.atEndOfMonth();
+        if (debut.isAfter(fin)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de début doit précéder la date de fin");
+        }
+        return absenceRepository
+                .findByEmployeIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqualOrderByDateDebutDesc(employeId, fin, debut)
+                .stream()
+                .map(this::entityVersResponseDTO)
+                .toList();
     }
 
     // POST /absences : saisit une nouvelle absence (INSERT)
@@ -71,6 +92,7 @@ public class AbsenceService {
         dto.setDateDebut(absence.getDateDebut());
         dto.setDateFin(absence.getDateFin());
         dto.setMotif(absence.getMotif());
+        dto.setDureeJours(absence.dureeJours());   // F8
         dto.setEmployeId(absence.getEmploye().getId());
         dto.setEmployeNom(absence.getEmploye().getNom());
         return dto;

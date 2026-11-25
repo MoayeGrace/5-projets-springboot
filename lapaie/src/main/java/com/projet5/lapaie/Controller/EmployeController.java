@@ -1,17 +1,21 @@
 package com.projet5.lapaie.Controller;
 
+import com.projet5.lapaie.DTO.AbsenceResponseDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
 import com.projet5.lapaie.DTO.ContratResponseDTO;
 import com.projet5.lapaie.DTO.EmployeRequestDTO;
 import com.projet5.lapaie.DTO.EmployeResponseDTO;
+import com.projet5.lapaie.Service.AbsenceService;
 import com.projet5.lapaie.Service.BulletinService;
 import com.projet5.lapaie.Service.ContratService;
 import com.projet5.lapaie.Service.EmployeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -22,6 +26,15 @@ public class EmployeController {
     private final EmployeService employeService;
     private final ContratService contratService;   // F6
     private final BulletinService bulletinService; // F7
+    private final AbsenceService absenceService;   // F8
+
+    // F8 - GET /employes/{id}/absences?du=2026-11-01&au=2026-11-30 : absences de la période, mois en cours par défaut (200, 400 ou 404)
+    @GetMapping("/{id}/absences")
+    public List<AbsenceResponseDTO> absences(@PathVariable Long id,
+                                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate du,
+                                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate au) {
+        return absenceService.listerParEmploye(id, du, au);
+    }
 
     // F7 - GET /employes/{id}/bulletins?annee=2026 : bulletins de l'année par mois décroissant, avec l'état d'édition (200, ou 404)
     @GetMapping("/{id}/bulletins")

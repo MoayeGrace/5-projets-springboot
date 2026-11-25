@@ -21,4 +21,5 @@ public class AbsenceResponseDTO {
     private LocalDate dateDebut;
     private LocalDate dateFin;
     private String motif;
+    private long dureeJours;   // F8 : durée en jours, bornes incluses
 }
