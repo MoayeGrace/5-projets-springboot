@@ -30,7 +30,7 @@ public class ContratRequestDTO {
     private LocalDate dateFin;
 
     @NotBlank(message = "Le poste est obligatoire")
-    @Size(max = 150)
+    @Size(max = 100, message = "Le poste fait au plus 100 caractères")
     private String poste;
 
     @NotNull(message = "Le salaire de base est obligatoire")

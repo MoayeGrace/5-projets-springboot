@@ -19,13 +19,13 @@ public class EmployeRequestDTO {
     private String nom;
 
     @NotBlank(message = "Le matricule est obligatoire")
-    @Size(max = 30)
+    @Size(max = 20, message = "Le matricule fait au plus 20 caractères")
     private String matricule;
 
     @NotNull(message = "La date d'embauche est obligatoire")
     private LocalDate dateEmbauche;
 
     @NotBlank(message = "Le service est obligatoire")
-    @Size(max = 100)
+    @Size(max = 50, message = "Le service fait au plus 50 caractères")
     private String service;
 }
