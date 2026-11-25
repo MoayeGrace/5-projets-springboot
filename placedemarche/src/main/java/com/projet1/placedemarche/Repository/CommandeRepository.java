@@ -15,8 +15,8 @@ import java.util.List;
 @Repository
 public interface CommandeRepository extends JpaRepository<CommandeEntity, Long> {
 
-    // F8 : les commandes d'un client, de la plus récemment modifiée à la plus ancienne
-    List<CommandeEntity> findByClientIdOrderByDateModificationDesc(Long clientId);
+    // F8 : les commandes d'un client, de la plus récemment modifiée à la plus ancienne (à égalité, la plus récente d'abord)
+    List<CommandeEntity> findByClientIdOrderByDateModificationDescIdDesc(Long clientId);
 
     // F16 - nombre de commandes d'un produit dans un statut donné (ici EN_ATTENTE)
     long countByProduitIdAndStatut(Long produitId, StatutCommande statut);

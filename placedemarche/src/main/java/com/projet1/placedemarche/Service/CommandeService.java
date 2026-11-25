@@ -44,7 +44,7 @@ public class CommandeService {
     // F8 - GET /clients/{id}/commandes : commandes d'un client, de la plus récemment modifiée à la plus ancienne (404 si le client n'existe pas)
     public List<CommandeResponseDTO> listerParClient(Long clientId) {
         trouverOu404(clientRepository, clientId, "Client");
-        return commandeRepository.findByClientIdOrderByDateModificationDesc(clientId)
+        return commandeRepository.findByClientIdOrderByDateModificationDescIdDesc(clientId)
                 .stream()
                 .map(this::entityVersResponseDTO)
                 .toList();
