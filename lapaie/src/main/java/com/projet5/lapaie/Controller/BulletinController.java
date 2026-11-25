@@ -2,10 +2,12 @@ package com.projet5.lapaie.Controller;
 
 import com.projet5.lapaie.DTO.BulletinRequestDTO;
 import com.projet5.lapaie.DTO.BulletinResponseDTO;
+import com.projet5.lapaie.DTO.MasseSalarialeDTO;
 import com.projet5.lapaie.DTO.PageResponseDTO;
 import com.projet5.lapaie.DTO.RegularisationRequestDTO;
 import com.projet5.lapaie.DTO.RegularisationResponseDTO;
 import com.projet5.lapaie.Service.BulletinService;
+import com.projet5.lapaie.Service.StatistiqueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,13 @@ import org.springframework.web.bind.annotation.*;
 public class BulletinController {
 
     private final BulletinService bulletinService;
+    private final StatistiqueService statistiqueService;   // F17
+
+    // F17 - GET /bulletins/masse-salariale?mois=2026-11 : total à verser et à déclarer, par service (200, ou 400)
+    @GetMapping("/masse-salariale")
+    public MasseSalarialeDTO masseSalariale(@RequestParam(required = false) String mois) {
+        return statistiqueService.masseSalariale(mois);
+    }
 
     // F10 - GET /bulletins?page=0&size=50&sort=mois,desc : bulletins page par page (200, ou 400 si tri invalide)
     // Pageable : Spring le remplit tout seul à partir de page, size et sort ; @PageableDefault = 1re page de 50 éléments

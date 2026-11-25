@@ -16,6 +16,9 @@ public interface BulletinRepository extends JpaRepository<BulletinEntity, Long> 
     // F13 : vrai si l'employé a déjà un bulletin pour ce mois
     boolean existsByEmployeIdAndMois(Long employeId, String mois);
 
+    // F17 : tous les bulletins d'un mois
+    List<BulletinEntity> findByMois(String mois);
+
     // F16 : le bulletin d'un employé pour un mois
     Optional<BulletinEntity> findByEmployeIdAndMois(Long employeId, String mois);
 
