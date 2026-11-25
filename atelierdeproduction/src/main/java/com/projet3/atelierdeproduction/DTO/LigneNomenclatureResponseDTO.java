@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -23,4 +24,7 @@ public class LigneNomenclatureResponseDTO {
     private TypeArticle composantType;
 
     private BigDecimal quantite;
+
+    private Integer version;              // F15
+    private LocalDate dateApplication;    // F15 : null = version en préparation
 }

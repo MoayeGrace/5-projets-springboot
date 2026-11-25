@@ -1,14 +1,10 @@
 package com.projet3.atelierdeproduction.Service;
 
 import com.projet3.atelierdeproduction.DTO.ChargeMachineDTO;
-import com.projet3.atelierdeproduction.DTO.MaintenanceRequestDTO;
-import com.projet3.atelierdeproduction.DTO.MaintenanceResponseDTO;
 import com.projet3.atelierdeproduction.Entity.MachineEntity;
-import com.projet3.atelierdeproduction.Entity.MaintenanceEntity;
 import com.projet3.atelierdeproduction.Entity.OrdreFabricationEntity;
 import com.projet3.atelierdeproduction.Entity.StatutOrdre;
 import com.projet3.atelierdeproduction.Repository.MachineRepository;
-import com.projet3.atelierdeproduction.Repository.MaintenanceRepository;
 import com.projet3.atelierdeproduction.Repository.OrdreFabricationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,36 +26,14 @@ import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 @RequiredArgsConstructor
 public class ChargeMachineService {
 
-    // F19 - heures ouvrables : du lundi au vendredi, de 8h à 16h
+    // F19 - la journée de travail commence à 8h, du lundi au vendredi ; sa durée est celle de la machine
     private static final LocalTime OUVERTURE = LocalTime.of(8, 0);
-    private static final LocalTime FERMETURE = LocalTime.of(16, 0);
 
     private final MachineRepository machineRepository;
-    private final MaintenanceRepository maintenanceRepository;
     private final OrdreFabricationRepository ordreFabricationRepository;
 
-    // F19 - POST /machines/{id}/maintenances : enregistre un arrêt de maintenance (400 si la fin précède le début)
-    public MaintenanceResponseDTO ajouterMaintenance(Long machineId, MaintenanceRequestDTO dto) {
-        MachineEntity machine = trouverOu404(machineRepository, machineId, "Machine");
-        if (!dto.getFin().isAfter(dto.getDebut())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fin de l'arrêt doit être après son début");
-        }
-        MaintenanceEntity maintenance = new MaintenanceEntity();
-        maintenance.setMachine(machine);
-        maintenance.setDebut(dto.getDebut());
-        maintenance.setFin(dto.getFin());
-        maintenance.setMotif(dto.getMotif());
-        return maintenanceVersDTO(maintenanceRepository.save(maintenance));
-    }
-
-    // F19 - GET /machines/{id}/maintenances : arrêts de la machine
-    public List<MaintenanceResponseDTO> maintenances(Long machineId) {
-        trouverOu404(machineRepository, machineId, "Machine");
-        return maintenanceRepository.findByMachineIdOrderByDebutAsc(machineId).stream().map(this::maintenanceVersDTO).toList();
-    }
-
     // F19 - GET /machines/{id}/charge?du=&au= : heures occupées par les ordres de la période rapportées aux heures ouvrables,
-    // les arrêts de maintenance étant retirés du dénominateur ; détail jour par jour (semaine en cours par défaut)
+    // l'arrêt de maintenance étant retiré du dénominateur ; détail jour par jour (semaine en cours par défaut)
     public ChargeMachineDTO charge(Long machineId, LocalDate du, LocalDate au) {
         MachineEntity machine = trouverOu404(machineRepository, machineId, "Machine");
         LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
@@ -70,7 +44,6 @@ public class ChargeMachineService {
         }
 
         List<OrdreFabricationEntity> ordres = ordreFabricationRepository.findByMachineIdAndStatutNot(machineId, StatutOrdre.ANNULE);
-        List<MaintenanceEntity> maintenances = maintenanceRepository.findByMachineIdOrderByDebutAsc(machineId);
 
         ChargeMachineDTO dto = new ChargeMachineDTO();
         dto.setMachineId(machine.getId());
@@ -88,12 +61,12 @@ public class ChargeMachineService {
             long occupe = 0;
             if (jour.getDayOfWeek() != DayOfWeek.SATURDAY && jour.getDayOfWeek() != DayOfWeek.SUNDAY) {
                 LocalDateTime ouverture = jour.atTime(OUVERTURE);
-                LocalDateTime fermeture = jour.atTime(FERMETURE);
-                long arret = maintenances.stream()
-                        .mapToLong(m -> recouvrement(m.getDebut(), m.getFin(), ouverture, fermeture)).sum();
+                LocalDateTime fermeture = ouverture.plusHours(machine.getHeuresOuvrablesParJour());
+                long arret = (machine.getDebutMaintenance() == null) ? 0
+                        : recouvrement(machine.getDebutMaintenance(), machine.getFinMaintenance(), ouverture, fermeture);
                 dispo = Math.max(0, Duration.between(ouverture, fermeture).toMinutes() - arret);
                 occupe = Math.min(dispo, ordres.stream()
-                        .mapToLong(o -> recouvrement(o.getDatePrevue(), o.dateFinPrevue(), ouverture, fermeture)).sum());
+                        .mapToLong(o -> recouvrement(o.getDatePrevue(), o.getDateFinPrevue(), ouverture, fermeture)).sum());
             }
             ChargeMachineDTO.Jour ligne = new ChargeMachineDTO.Jour();
             ligne.setDate(jour);
@@ -128,16 +101,5 @@ public class ChargeMachineService {
             return BigDecimal.ZERO;
         }
         return BigDecimal.valueOf(occupe * 100).divide(BigDecimal.valueOf(disponible), 2, RoundingMode.HALF_UP);
-    }
-
-    // F19 - Entity -> DTO
-    private MaintenanceResponseDTO maintenanceVersDTO(MaintenanceEntity maintenance) {
-        MaintenanceResponseDTO dto = new MaintenanceResponseDTO();
-        dto.setId(maintenance.getId());
-        dto.setMachineId(maintenance.getMachine().getId());
-        dto.setDebut(maintenance.getDebut());
-        dto.setFin(maintenance.getFin());
-        dto.setMotif(maintenance.getMotif());
-        return dto;
     }
 }

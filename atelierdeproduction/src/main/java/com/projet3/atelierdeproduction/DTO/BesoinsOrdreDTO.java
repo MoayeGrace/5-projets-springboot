@@ -17,7 +17,7 @@ public class BesoinsOrdreDTO {
 
     private Long ordreId;
     private String articleReference;
-    private Integer quantite;
+    private BigDecimal quantite;
     private StatutOrdre statut;
     private boolean besoinsReels;              // true pour un ordre terminé : quantités réellement consommées
     private List<Ligne> besoins = new ArrayList<>();

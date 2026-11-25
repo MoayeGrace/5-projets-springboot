@@ -3,11 +3,8 @@ package com.projet3.atelierdeproduction.Service;
 import com.projet3.atelierdeproduction.DTO.VersionNomenclatureDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
 import com.projet3.atelierdeproduction.Entity.LigneNomenclatureEntity;
-import com.projet3.atelierdeproduction.Entity.LigneVersionEntity;
-import com.projet3.atelierdeproduction.Entity.StatutVersion;
-import com.projet3.atelierdeproduction.Entity.VersionNomenclatureEntity;
 import com.projet3.atelierdeproduction.Repository.ArticleRepository;
-import com.projet3.atelierdeproduction.Repository.VersionNomenclatureRepository;
+import com.projet3.atelierdeproduction.Repository.LigneNomenclatureRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,88 +12,112 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 
+// F15 - versions de nomenclature : chaque ligne porte son numéro de version et sa date d'application (null = en préparation)
 @Service
 @RequiredArgsConstructor
 public class VersionNomenclatureService {
 
-    private final VersionNomenclatureRepository versionRepository;
+    private final LigneNomenclatureRepository ligneRepository;
     private final ArticleRepository articleRepository;
 
-    // F15 - POST /articles/{id}/nomenclature/version : ouvre une nouvelle version en préparation (409 s'il y en a déjà une)
-    public VersionNomenclatureDTO ouvrirVersion(Long articleId) {
-        ArticleEntity article = trouverOu404(articleRepository, articleId, "Article");
-        versionRepository.findFirstByArticleIdAndStatut(articleId, StatutVersion.EN_PREPARATION).ifPresent(v -> {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La version " + v.getNumero() + " de " + article.getReference() + " est déjà en préparation");
-        });
-        VersionNomenclatureEntity version = new VersionNomenclatureEntity();
-        version.setArticle(article);
-        version.setNumero(versionRepository.findByArticleIdOrderByNumeroAsc(articleId).size() + 1);
-        return entityVersDTO(versionRepository.save(version));
+    // F15 - numéro de la version en vigueur aujourd'hui (null si l'article n'a pas de nomenclature appliquée)
+    public Integer versionEnVigueur(Long articleId) {
+        return ligneRepository.versionApplicable(articleId, LocalDate.now());
     }
 
-    // F15 - POST /articles/{id}/nomenclature/version/application : fige les lignes actuelles dans la version en préparation
-    // et la date ; elle devient la nomenclature en vigueur à partir de maintenant (409 si aucune version n'est en préparation)
+    // F15 - lignes de la version en vigueur aujourd'hui (vide si aucune)
+    public List<LigneNomenclatureEntity> lignesEnVigueur(Long articleId) {
+        return lignesDeLaVersion(articleId, versionEnVigueur(articleId));
+    }
+
+    // F15 - lignes d'une version donnée, triées par référence du composant (vide si la version est null)
+    public List<LigneNomenclatureEntity> lignesDeLaVersion(Long articleId, Integer version) {
+        if (version == null) {
+            return List.of();
+        }
+        return ligneRepository.findByArticleComposeIdAndVersionOrderByComposantReferenceAsc(articleId, version);
+    }
+
+    // F15 - POST /articles/{id}/nomenclature/version : recopie la version en vigueur dans une nouvelle version en préparation,
+    // que l'on modifie ensuite avec /nomenclatures (409 si une version est déjà en préparation ou s'il n'y a rien à versionner)
+    @Transactional
+    public VersionNomenclatureDTO ouvrirVersion(Long articleId) {
+        ArticleEntity article = trouverOu404(articleRepository, articleId, "Article");
+        Integer enPreparation = ligneRepository.versionEnPreparation(articleId);
+        if (enPreparation != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La version " + enPreparation + " de " + article.getReference() + " est déjà en préparation");
+        }
+        List<LigneNomenclatureEntity> actuelles = lignesEnVigueur(articleId);
+        if (actuelles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    article.getReference() + " n'a pas de nomenclature en vigueur : saisissez ses lignes avec POST /nomenclatures");
+        }
+        int numero = ligneRepository.derniereVersion(articleId) + 1;
+        for (LigneNomenclatureEntity ligne : actuelles) {
+            LigneNomenclatureEntity copie = new LigneNomenclatureEntity();
+            copie.setArticleCompose(article);
+            copie.setComposantReference(ligne.getComposantReference());
+            copie.setQuantite(ligne.getQuantite());
+            copie.setVersion(numero);
+            copie.setDateApplication(null);   // en préparation
+            ligneRepository.save(copie);
+        }
+        return versionVersDTO(article, lignesDeLaVersion(articleId, numero));
+    }
+
+    // F15 - POST /articles/{id}/nomenclature/version/application : date la version en préparation d'aujourd'hui ;
+    // elle devient la nomenclature en vigueur (409 si aucune version n'est en préparation)
     @Transactional
     public VersionNomenclatureDTO appliquerVersion(Long articleId) {
         ArticleEntity article = trouverOu404(articleRepository, articleId, "Article");
-        VersionNomenclatureEntity version = versionRepository
-                .findFirstByArticleIdAndStatut(articleId, StatutVersion.EN_PREPARATION)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Aucune version en préparation pour " + article.getReference()));
-
-        for (LigneNomenclatureEntity ligne : article.getComposants()) {
-            LigneVersionEntity copie = new LigneVersionEntity();
-            copie.setVersion(version);
-            copie.setComposant(ligne.getComposant());
-            copie.setQuantite(ligne.getQuantite());
-            version.getLignes().add(copie);
+        Integer numero = ligneRepository.versionEnPreparation(articleId);
+        if (numero == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucune version en préparation pour " + article.getReference());
         }
-        version.setStatut(StatutVersion.APPLIQUEE);
-        version.setDateApplication(LocalDateTime.now());
-        return entityVersDTO(versionRepository.save(version));
+        List<LigneNomenclatureEntity> lignes = lignesDeLaVersion(articleId, numero);
+        lignes.forEach(ligne -> ligne.setDateApplication(LocalDate.now()));
+        return versionVersDTO(article, lignes);
     }
 
-    // F15 - GET /articles/{id}/nomenclature/versions : toutes les versions de l'article
+    // F15 - GET /articles/{id}/nomenclature/versions : toutes les versions de l'article, avec leurs lignes
     public List<VersionNomenclatureDTO> lister(Long articleId) {
-        trouverOu404(articleRepository, articleId, "Article");
-        return versionRepository.findByArticleIdOrderByNumeroAsc(articleId).stream().map(this::entityVersDTO).toList();
+        ArticleEntity article = trouverOu404(articleRepository, articleId, "Article");
+        Map<Integer, List<LigneNomenclatureEntity>> parVersion = new LinkedHashMap<>();
+        for (LigneNomenclatureEntity ligne : ligneRepository.findByArticleComposeIdOrderByVersionAscComposantReferenceAsc(articleId)) {
+            parVersion.computeIfAbsent(ligne.getVersion(), v -> new ArrayList<>()).add(ligne);
+        }
+        return parVersion.values().stream().map(lignes -> versionVersDTO(article, lignes)).toList();
     }
 
-    // F15 - GET /articles/{id}/nomenclature/versions/en-vigueur?date= : version applicable à une date passée (404 si aucune)
+    // F15 - GET /articles/{id}/nomenclature/versions/en-vigueur?date= : version applicable à une date (404 si aucune)
     public VersionNomenclatureDTO versionALaDate(Long articleId, LocalDate date) {
-        trouverOu404(articleRepository, articleId, "Article");
-        return versionEnVigueur(articleId, date.plusDays(1).atStartOfDay().minusNanos(1))
-                .map(this::entityVersDTO)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Aucune version de nomenclature n'était appliquée le " + date));
+        ArticleEntity article = trouverOu404(articleRepository, articleId, "Article");
+        Integer numero = ligneRepository.versionApplicable(articleId, date);
+        if (numero == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucune version de nomenclature n'était appliquée le " + date);
+        }
+        return versionVersDTO(article, lignesDeLaVersion(articleId, numero));
     }
 
-    // F15 - version appliquée en vigueur à un instant donné (utilisée aussi au lancement d'un ordre)
-    public Optional<VersionNomenclatureEntity> versionEnVigueur(Long articleId, LocalDateTime instant) {
-        return versionRepository.findFirstByArticleIdAndStatutAndDateApplicationLessThanEqualOrderByDateApplicationDesc(
-                articleId, StatutVersion.APPLIQUEE, instant);
-    }
-
-    // Entity -> DTO
-    private VersionNomenclatureDTO entityVersDTO(VersionNomenclatureEntity version) {
+    // F15 - lignes d'une même version -> DTO
+    private VersionNomenclatureDTO versionVersDTO(ArticleEntity article, List<LigneNomenclatureEntity> lignes) {
         VersionNomenclatureDTO dto = new VersionNomenclatureDTO();
-        dto.setId(version.getId());
-        dto.setArticleId(version.getArticle().getId());
-        dto.setArticleReference(version.getArticle().getReference());
-        dto.setNumero(version.getNumero());
-        dto.setStatut(version.getStatut());
-        dto.setDateCreation(version.getDateCreation());
-        dto.setDateApplication(version.getDateApplication());
-        for (LigneVersionEntity ligne : version.getLignes()) {
+        dto.setArticleId(article.getId());
+        dto.setArticleReference(article.getReference());
+        dto.setNumero(lignes.get(0).getVersion());
+        dto.setDateApplication(lignes.get(0).getDateApplication());
+        dto.setEnPreparation(lignes.get(0).getDateApplication() == null);
+        for (LigneNomenclatureEntity ligne : lignes) {
             VersionNomenclatureDTO.Ligne l = new VersionNomenclatureDTO.Ligne();
-            l.setComposantReference(ligne.getComposant().getReference());
+            l.setComposantReference(ligne.getComposantReference());
             l.setQuantite(ligne.getQuantite());
             dto.getLignes().add(l);
         }

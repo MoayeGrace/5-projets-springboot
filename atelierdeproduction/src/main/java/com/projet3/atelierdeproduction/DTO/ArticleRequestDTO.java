@@ -3,6 +3,7 @@ package com.projet3.atelierdeproduction.DTO;
 import com.projet3.atelierdeproduction.Entity.TypeArticle;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -17,7 +18,7 @@ import java.math.BigDecimal;
 public class ArticleRequestDTO {
 
     @NotBlank(message = "La référence est obligatoire")
-    @Size(max = 50)
+    @Size(max = 30)
     private String reference;
 
     @NotBlank(message = "Le libellé est obligatoire")
@@ -31,11 +32,11 @@ public class ArticleRequestDTO {
     @NotNull(message = "Le type est obligatoire (ACHETE ou FABRIQUE)")
     private TypeArticle type;
 
-    // F12 - temps de fabrication d'une unité en minutes ; facultatif (0 si absent)
-    @PositiveOrZero(message = "Le temps unitaire ne peut pas être négatif")
-    private Integer tempsUnitaireMinutes;
+    // F12 - temps machine d'une unité en minutes ; facultatif (sans objet pour un article acheté)
+    @Positive(message = "La durée unitaire doit être positive")
+    private Integer dureeUnitaireMinutes;
 
-    // F14 - quantité disponible en magasin ; facultative (0 si absente)
-    @PositiveOrZero(message = "Le stock ne peut pas être négatif")
-    private BigDecimal stock;
+    // F14 - quantité en magasin ; facultative (0 à la création, inchangée à la modification si absente)
+    @PositiveOrZero(message = "La quantité en stock ne peut pas être négative")
+    private BigDecimal quantiteStock;
 }

@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -18,8 +18,8 @@ public class OrdreFabricationResponseDTO {
     private Long articleId;
     private String articleReference;
     private String articleLibelle;
+    private BigDecimal quantite;
 
-    private Integer quantite;
     private LocalDateTime datePrevue;
     private LocalDateTime dateFinPrevue;   // F12 : fin du créneau occupé sur la machine
     private StatutOrdre statut;
@@ -30,7 +30,7 @@ public class OrdreFabricationResponseDTO {
     private Long operateurId;
     private String operateurNom;
 
-    private Integer retardJours;                    // F16 : retard cumulé en jours
-    private Integer versionNomenclature;           // F15 : numéro de la version utilisée au lancement
-    private List<HistoriqueStatutDTO> historique;   // F13 : changements de statut horodatés
+    private Integer versionNomenclature;    // F15 : version utilisée depuis le lancement
+    private Integer retardJours;            // F16 : retard cumulé en jours
+    private LocalDateTime dateModification; // F13 : horodatage du dernier changement
 }

@@ -20,13 +20,13 @@ public class ArticleEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, unique = true, length = 30)
     private String reference;
 
     @Column(nullable = false, length = 150)
     private String libelle;
 
-    // Unité de mesure (pièce, kg, m...)
+    // Unité de mesure (PIECE, KG, METRE...)
     @Column(nullable = false, length = 20)
     private String unite;
 
@@ -34,19 +34,22 @@ public class ArticleEntity {
     @Column(nullable = false, length = 20)
     private TypeArticle type;
 
-    // F12 - gamme : temps de fabrication d'une unité sur machine, en minutes (0 pour un article acheté)
-    @Column(nullable = false)
-    private Integer tempsUnitaireMinutes = 0;
+    // F12 - temps machine pour produire une unité, en minutes (null pour un article acheté)
+    private Integer dureeUnitaireMinutes;
 
-    // F14 - quantité disponible en magasin (diminuée par les réservations au lancement des ordres)
+    // F14 - quantité en magasin, et part déjà réservée par les ordres lancés
     @Column(nullable = false, precision = 12, scale = 3)
-    private BigDecimal stock = BigDecimal.ZERO;
+    private BigDecimal quantiteStock = BigDecimal.ZERO;
 
-    // Lignes de nomenclature dont cet article est le composé : "de quoi il est fait"
-    @OneToMany(mappedBy = "compose")
-    private List<LigneNomenclatureEntity> composants = new ArrayList<>();
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantiteReservee = BigDecimal.ZERO;
 
-    // Lignes de nomenclature dont cet article est le composant : "où il est utilisé"
-    @OneToMany(mappedBy = "composant")
-    private List<LigneNomenclatureEntity> utilisations = new ArrayList<>();
+    // Lignes de nomenclature dont cet article est le composé (toutes versions confondues)
+    @OneToMany(mappedBy = "articleCompose")
+    private List<LigneNomenclatureEntity> lignesNomenclature = new ArrayList<>();
+
+    // F14 - quantité réellement disponible : stock moins réservations
+    public BigDecimal quantiteDisponible() {
+        return quantiteStock.subtract(quantiteReservee);
+    }
 }

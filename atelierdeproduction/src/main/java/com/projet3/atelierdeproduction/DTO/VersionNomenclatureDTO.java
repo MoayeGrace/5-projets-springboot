@@ -1,31 +1,28 @@
 package com.projet3.atelierdeproduction.DTO;
 
-import com.projet3.atelierdeproduction.Entity.StatutVersion;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-// F15 - une version de nomenclature et ses lignes figées
+// F15 - une version de la nomenclature d'un article et ses lignes
 @Getter
 @Setter
 @NoArgsConstructor
 public class VersionNomenclatureDTO {
 
-    private Long id;
     private Long articleId;
     private String articleReference;
     private Integer numero;
-    private StatutVersion statut;
-    private LocalDateTime dateCreation;
-    private LocalDateTime dateApplication;
+    private boolean enPreparation;
+    private LocalDate dateApplication;   // null tant que la version est en préparation
     private List<Ligne> lignes = new ArrayList<>();
 
-    // F15 - une ligne figée : composant et quantité
+    // F15 - une ligne de la version : composant et quantité
     @Getter
     @Setter
     @NoArgsConstructor

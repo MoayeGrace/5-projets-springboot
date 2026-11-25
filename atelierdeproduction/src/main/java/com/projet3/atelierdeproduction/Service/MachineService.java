@@ -5,7 +5,9 @@ import com.projet3.atelierdeproduction.DTO.MachineResponseDTO;
 import com.projet3.atelierdeproduction.Entity.MachineEntity;
 import com.projet3.atelierdeproduction.Repository.MachineRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -25,7 +27,7 @@ public class MachineService {
                 .toList();
     }
 
-    // GET /machines/{id} : récupère la fiche d'une machine (404 si elle n'existe pas)
+    // GET /machines/{id} : récupère une machine par son id (404 si elle n'existe pas)
     public MachineResponseDTO detail(Long id) {
         return entityVersResponseDTO(trouverOu404(machineRepository, id, "Machine"));
     }
@@ -49,11 +51,19 @@ public class MachineService {
         machineRepository.delete(trouverOu404(machineRepository, id, "Machine"));
     }
 
-    // DTO -> Entity
+    // DTO -> Entity ; F19 - 8 heures ouvrables par défaut ; l'arrêt de maintenance a un début et une fin, dans l'ordre (400 sinon)
     private void dtoVersEntity(MachineRequestDTO dto, MachineEntity machine) {
+        if ((dto.getDebutMaintenance() == null) != (dto.getFinMaintenance() == null)
+                || (dto.getDebutMaintenance() != null && !dto.getFinMaintenance().isAfter(dto.getDebutMaintenance()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "L'arrêt de maintenance demande un début et une fin, la fin après le début");
+        }
         machine.setCode(dto.getCode());
         machine.setType(dto.getType());
         machine.setAtelier(dto.getAtelier());
+        machine.setHeuresOuvrablesParJour(dto.getHeuresOuvrablesParJour() != null ? dto.getHeuresOuvrablesParJour() : 8);
+        machine.setDebutMaintenance(dto.getDebutMaintenance());
+        machine.setFinMaintenance(dto.getFinMaintenance());
     }
 
     // Entity -> DTO
@@ -63,6 +73,9 @@ public class MachineService {
         dto.setCode(machine.getCode());
         dto.setType(machine.getType());
         dto.setAtelier(machine.getAtelier());
+        dto.setHeuresOuvrablesParJour(machine.getHeuresOuvrablesParJour());   // F19
+        dto.setDebutMaintenance(machine.getDebutMaintenance());
+        dto.setFinMaintenance(machine.getFinMaintenance());
         return dto;
     }
 }

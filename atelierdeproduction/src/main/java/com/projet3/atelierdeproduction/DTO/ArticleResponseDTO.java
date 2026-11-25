@@ -17,6 +17,8 @@ public class ArticleResponseDTO {
     private String libelle;
     private String unite;
     private TypeArticle type;
-    private Integer tempsUnitaireMinutes;   // F12
-    private BigDecimal stock;               // F14
+    private Integer dureeUnitaireMinutes;     // F12
+    private BigDecimal quantiteStock;         // F14
+    private BigDecimal quantiteReservee;      // F14 : réservée par les ordres lancés
+    private BigDecimal quantiteDisponible;    // F14 : stock - réservée
 }

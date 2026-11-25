@@ -5,12 +5,13 @@ import com.projet3.atelierdeproduction.DTO.ArticleResponseDTO;
 import com.projet3.atelierdeproduction.DTO.PageResponseDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
 import com.projet3.atelierdeproduction.Repository.ArticleRepository;
+import com.projet3.atelierdeproduction.Repository.LigneNomenclatureRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 
@@ -19,6 +20,7 @@ import static com.projet3.atelierdeproduction.Service.ServiceUtils.trouverOu404;
 public class ArticleService {
 
     private final ArticleRepository articleRepository;
+    private final LigneNomenclatureRepository ligneNomenclatureRepository;
 
     // F10 - taille de page maximale autorisée
     private static final int TAILLE_PAGE_MAX = 100;
@@ -43,26 +45,43 @@ public class ArticleService {
         return entityVersResponseDTO(articleRepository.save(article));
     }
 
-    // PUT /articles/{id} : charge l'article existant (404 sinon), remplace ses champs, puis UPDATE
+    // PUT /articles/{id} : charge l'article (404 sinon), remplace ses champs, puis UPDATE ; la référence d'un composant
+    // utilisé dans une nomenclature ne change pas (409), le stock ne descend pas sous la quantité réservée (409)
     public ArticleResponseDTO modifier(Long id, ArticleRequestDTO dto) {
         ArticleEntity article = trouverOu404(articleRepository, id, "Article");
+        if (!article.getReference().equals(dto.getReference())
+                && ligneNomenclatureRepository.existsByComposantReference(article.getReference())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La référence " + article.getReference() + " est utilisée dans des nomenclatures : elle ne peut pas changer");
+        }
+        if (dto.getQuantiteStock() != null && dto.getQuantiteStock().compareTo(article.getQuantiteReservee()) < 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le stock ne peut pas descendre sous la quantité réservée (" + article.getQuantiteReservee() + ")");
+        }
         dtoVersEntity(dto, article);
         return entityVersResponseDTO(articleRepository.save(article));
     }
 
-    // DELETE /articles/{id} : vérifie que l'article existe (404 sinon), puis supprime la référence
+    // DELETE /articles/{id} : supprime la référence (404 si inconnue, 409 si elle sert de composant dans une nomenclature)
     public void supprimer(Long id) {
-        articleRepository.delete(trouverOu404(articleRepository, id, "Article"));
+        ArticleEntity article = trouverOu404(articleRepository, id, "Article");
+        if (ligneNomenclatureRepository.existsByComposantReference(article.getReference())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "L'article " + article.getReference() + " est utilisé comme composant : retirez-le d'abord des nomenclatures");
+        }
+        articleRepository.delete(article);
     }
 
-    // DTO -> Entity
+    // DTO -> Entity (stock absent : 0 à la création, inchangé à la modification)
     private void dtoVersEntity(ArticleRequestDTO dto, ArticleEntity article) {
         article.setReference(dto.getReference());
         article.setLibelle(dto.getLibelle());
         article.setUnite(dto.getUnite());
         article.setType(dto.getType());
-        article.setTempsUnitaireMinutes(dto.getTempsUnitaireMinutes() != null ? dto.getTempsUnitaireMinutes() : 0);   // F12
-        article.setStock(dto.getStock() != null ? dto.getStock() : BigDecimal.ZERO);   // F14
+        article.setDureeUnitaireMinutes(dto.getDureeUnitaireMinutes());   // F12
+        if (dto.getQuantiteStock() != null) {
+            article.setQuantiteStock(dto.getQuantiteStock());             // F14
+        }
     }
 
     // Entity -> DTO
@@ -73,8 +92,10 @@ public class ArticleService {
         dto.setLibelle(article.getLibelle());
         dto.setUnite(article.getUnite());
         dto.setType(article.getType());
-        dto.setTempsUnitaireMinutes(article.getTempsUnitaireMinutes());   // F12
-        dto.setStock(article.getStock());                                 // F14
+        dto.setDureeUnitaireMinutes(article.getDureeUnitaireMinutes());   // F12
+        dto.setQuantiteStock(article.getQuantiteStock());                 // F14
+        dto.setQuantiteReservee(article.getQuantiteReservee());
+        dto.setQuantiteDisponible(article.quantiteDisponible());
         return dto;
     }
 }

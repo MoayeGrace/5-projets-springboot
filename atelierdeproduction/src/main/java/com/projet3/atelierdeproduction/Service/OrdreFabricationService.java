@@ -1,16 +1,14 @@
 package com.projet3.atelierdeproduction.Service;
 
 import com.projet3.atelierdeproduction.DTO.BesoinsOrdreDTO;
-import com.projet3.atelierdeproduction.DTO.HistoriqueStatutDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationRequestDTO;
 import com.projet3.atelierdeproduction.DTO.OrdreFabricationResponseDTO;
 import com.projet3.atelierdeproduction.Entity.ArticleEntity;
-import com.projet3.atelierdeproduction.Entity.ConsommationEntity;
-import com.projet3.atelierdeproduction.Entity.HistoriqueStatutEntity;
 import com.projet3.atelierdeproduction.Entity.MachineEntity;
 import com.projet3.atelierdeproduction.Entity.OperateurEntity;
 import com.projet3.atelierdeproduction.Entity.OrdreFabricationEntity;
 import com.projet3.atelierdeproduction.Entity.StatutOrdre;
+import com.projet3.atelierdeproduction.Entity.TypeArticle;
 import com.projet3.atelierdeproduction.Repository.ArticleRepository;
 import com.projet3.atelierdeproduction.Repository.MachineRepository;
 import com.projet3.atelierdeproduction.Repository.OperateurRepository;
@@ -27,7 +25,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +38,7 @@ public class OrdreFabricationService {
     private final ArticleRepository articleRepository;
     private final MachineRepository machineRepository;
     private final OperateurRepository operateurRepository;
-    private final DeploiementService deploiementService;   // F14
+    private final DeploiementService deploiementService;                   // F14 / F18
     private final VersionNomenclatureService versionNomenclatureService;   // F15
 
     // F8 - GET /ordres-fabrication?statut= : ordres du statut demandé (tous si absent), triés par date prévue
@@ -77,7 +74,7 @@ public class OrdreFabricationService {
         return entityVersResponseDTO(trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication"));
     }
 
-    // POST /ordres-fabrication : lance un nouvel ordre (INSERT) : article, quantité, date, machine et opérateur
+    // POST /ordres-fabrication : crée un ordre PLANIFIE (INSERT) : article, quantité, date, machine et opérateur
     public OrdreFabricationResponseDTO creer(OrdreFabricationRequestDTO dto) {
         OrdreFabricationEntity ordre = new OrdreFabricationEntity();
         dtoVersEntity(dto, ordre);
@@ -85,36 +82,47 @@ public class OrdreFabricationService {
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
     }
 
-    // PUT /ordres-fabrication/{id} : charge l'ordre existant (404 sinon), remplace ses champs (dont le statut), puis UPDATE
+    // PUT /ordres-fabrication/{id} : seul un ordre PLANIFIE se modifie (409 sinon) ; le créneau est revérifié (F12)
     public OrdreFabricationResponseDTO modifier(Long id, OrdreFabricationRequestDTO dto) {
         OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
+        if (ordre.getStatut() != StatutOrdre.PLANIFIE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Seul un ordre PLANIFIE peut être modifié (statut actuel : " + ordre.getStatut() + ")");
+        }
         dtoVersEntity(dto, ordre);
-        verifierMachineLibre(ordre);   // F12 - nouvelle date, machine ou quantité : le créneau est revérifié
+        verifierMachineLibre(ordre);
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
     }
 
-    // F12 - aucun autre ordre non annulé de la machine ne doit recouvrir le créneau de cet ordre (409 citant l'ordre bloquant)
+    // F12 - le créneau ne doit recouvrir ni l'arrêt de maintenance de la machine, ni un autre ordre non annulé (409)
     private void verifierMachineLibre(OrdreFabricationEntity ordre) {
-        if (ordre.getStatut() == StatutOrdre.ANNULE) {
-            return;
+        MachineEntity machine = ordre.getMachine();
+        if (machine.getDebutMaintenance() != null && ordre.chevauche(machine.getDebutMaintenance(), machine.getFinMaintenance())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La machine " + machine.getCode() + " est en maintenance du " + machine.getDebutMaintenance()
+                            + " au " + machine.getFinMaintenance());
         }
-        LocalDateTime debut = ordre.getDatePrevue();
-        LocalDateTime fin = ordre.dateFinPrevue();
-        for (OrdreFabricationEntity autre : ordreFabricationRepository.findByMachineIdAndStatutNot(ordre.getMachine().getId(), StatutOrdre.ANNULE)) {
-            if (!autre.getId().equals(ordre.getId()) && autre.chevauche(debut, fin)) {
+        for (OrdreFabricationEntity autre : ordreFabricationRepository.findByMachineIdAndStatutNot(machine.getId(), StatutOrdre.ANNULE)) {
+            if (!autre.getId().equals(ordre.getId()) && autre.chevauche(ordre.getDatePrevue(), ordre.getDateFinPrevue())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "La machine " + ordre.getMachine().getCode() + " est déjà occupée par l'ordre " + autre.getId()
-                                + " du " + autre.getDatePrevue() + " au " + autre.dateFinPrevue());
+                        "La machine " + machine.getCode() + " est déjà occupée par l'ordre " + autre.getId()
+                                + " du " + autre.getDatePrevue() + " au " + autre.getDateFinPrevue());
             }
         }
     }
 
-    // DELETE /ordres-fabrication/{id} : vérifie que l'ordre existe (404 sinon), puis le supprime
+    // DELETE /ordres-fabrication/{id} : supprime un ordre PLANIFIE ou ANNULE (404 s'il n'existe pas, 409 sinon)
     public void supprimer(Long id) {
-        ordreFabricationRepository.delete(trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication"));
+        OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
+        if (ordre.getStatut() == StatutOrdre.LANCE || ordre.getStatut() == StatutOrdre.TERMINE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Un ordre " + ordre.getStatut() + " ne se supprime pas : annulez-le s'il n'est pas terminé");
+        }
+        ordreFabricationRepository.delete(ordre);
     }
 
-    // F13 - POST /ordres-fabrication/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon)
+    // F13 - POST /ordres-fabrication/{id}/statut : fait évoluer le statut selon les transitions autorisées (409 sinon) ;
+    // F14 - LANCE réserve les composants, TERMINE les consomme, ANNULE après LANCE les libère
     @Transactional
     public OrdreFabricationResponseDTO changerStatut(Long id, StatutOrdre nouveauStatut) {
         OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
@@ -124,103 +132,99 @@ public class OrdreFabricationService {
                             + ordre.getStatut().statutsAtteignables());
         }
         if (nouveauStatut == StatutOrdre.LANCE) {
-            reserverComposants(ordre);    // F14
-            // F15 - l'ordre garde la version de nomenclature en vigueur à son lancement
-            versionNomenclatureService.versionEnVigueur(ordre.getArticle().getId(), LocalDateTime.now())
-                    .ifPresent(ordre::setVersionNomenclature);
-        } else if (nouveauStatut == StatutOrdre.ANNULE && ordre.getStatut() == StatutOrdre.LANCE) {
-            libererComposants(ordre);     // F14 - un ordre lancé puis annulé rend sa matière au magasin
+            // F15 - l'ordre reste rattaché à la version de nomenclature en vigueur à son lancement
+            ordre.setVersionNomenclature(versionNomenclatureService.versionEnVigueur(ordre.getArticle().getId()));
+            reserverComposants(ordre);   // F14
+        } else if (nouveauStatut == StatutOrdre.TERMINE) {
+            consommerComposants(ordre);
+        } else if (ordre.getStatut() == StatutOrdre.LANCE) {
+            libererComposants(ordre);    // ANNULE après lancement
         }
-        appliquerStatut(ordre, nouveauStatut);
+        ordre.setStatut(nouveauStatut);   // F13 - la date de modification est horodatée à l'enregistrement
         return entityVersResponseDTO(ordreFabricationRepository.save(ordre));
     }
 
-    // F18 - GET /ordres-fabrication/{id}/besoins : déploiement complet × quantité à produire, comparé au stock ;
-    // pour un ordre TERMINE, ce sont les quantités réellement consommées (réservées au lancement)
+    // F18 - GET /ordres-fabrication/{id}/besoins : déploiement complet × quantité, comparé au disponible ; un ordre lancé
+    // ou terminé utilise sa version figée (pour un ordre TERMINE : les quantités réellement consommées)
     public BesoinsOrdreDTO besoins(Long id) {
         OrdreFabricationEntity ordre = trouverOu404(ordreFabricationRepository, id, "Ordre de fabrication");
-        boolean reels = ordre.getStatut() == StatutOrdre.TERMINE;
-
-        Map<ArticleEntity, BigDecimal> necessaires = new LinkedHashMap<>();
-        if (reels) {
-            ordre.getConsommations().forEach(c -> necessaires.merge(c.getArticle(), c.getQuantite(), BigDecimal::add));
-        } else {
-            necessaires.putAll(deploiementService.besoinsAchetables(ordre.getArticle(), BigDecimal.valueOf(ordre.getQuantite())));
-        }
-
         BesoinsOrdreDTO dto = new BesoinsOrdreDTO();
         dto.setOrdreId(ordre.getId());
         dto.setArticleReference(ordre.getArticle().getReference());
         dto.setQuantite(ordre.getQuantite());
         dto.setStatut(ordre.getStatut());
-        dto.setBesoinsReels(reels);
-        necessaires.forEach((composant, necessaire) -> {
+        dto.setBesoinsReels(ordre.getStatut() == StatutOrdre.TERMINE);
+        besoinsDe(ordre).forEach((composant, necessaire) -> {
+            // un ordre lancé a déjà réservé sa part : elle lui reste disponible
+            BigDecimal disponible = composant.quantiteDisponible()
+                    .add(ordre.getStatut() == StatutOrdre.LANCE ? necessaire : BigDecimal.ZERO);
             BesoinsOrdreDTO.Ligne ligne = new BesoinsOrdreDTO.Ligne();
             ligne.setReference(composant.getReference());
             ligne.setLibelle(composant.getLibelle());
             ligne.setQuantiteNecessaire(necessaire.setScale(3, RoundingMode.HALF_UP));
-            ligne.setQuantiteDisponible(composant.getStock());
-            ligne.setEcart(composant.getStock().subtract(necessaire).setScale(3, RoundingMode.HALF_UP));
+            ligne.setQuantiteDisponible(disponible.setScale(3, RoundingMode.HALF_UP));
+            ligne.setEcart(disponible.subtract(necessaire).setScale(3, RoundingMode.HALF_UP));
             dto.getBesoins().add(ligne);
         });
         return dto;
     }
 
-    // F14 - au lancement : chaque composant acheté doit être disponible en quantité suffisante (409 listant les manques),
-    // puis les quantités consommées sont réservées (retirées du stock et tracées sur l'ordre)
-    private void reserverComposants(OrdreFabricationEntity ordre) {
-        Map<ArticleEntity, BigDecimal> besoins =
-                deploiementService.besoinsAchetables(ordre.getArticle(), BigDecimal.valueOf(ordre.getQuantite()));
+    // F14 / F18 - composants achetés nécessaires à l'ordre (version figée s'il a été lancé, sinon version en vigueur)
+    private Map<ArticleEntity, BigDecimal> besoinsDe(OrdreFabricationEntity ordre) {
+        return deploiementService.besoinsAchetables(ordre.getArticle(), ordre.getQuantite(), ordre.getVersionNomenclature());
+    }
 
+    // F14 - au lancement : chaque composant acheté doit être disponible en quantité suffisante (409 listant les manques),
+    // puis les quantités nécessaires sont réservées
+    private void reserverComposants(OrdreFabricationEntity ordre) {
+        Map<ArticleEntity, BigDecimal> besoins = besoinsDe(ordre);
         List<String> manquants = new ArrayList<>();
         besoins.forEach((composant, necessaire) -> {
-            if (composant.getStock().compareTo(necessaire) < 0) {
-                manquants.add(composant.getReference() + " (manque " + necessaire.subtract(composant.getStock()).stripTrailingZeros().toPlainString() + ")");
+            if (composant.quantiteDisponible().compareTo(necessaire) < 0) {
+                manquants.add(composant.getReference() + " (manque "
+                        + necessaire.subtract(composant.quantiteDisponible()).stripTrailingZeros().toPlainString() + ")");
             }
         });
         if (!manquants.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Lancement impossible, composants manquants : " + String.join(", ", manquants));
         }
+        besoins.forEach((composant, necessaire) -> composant.setQuantiteReservee(composant.getQuantiteReservee().add(necessaire)));
+    }
 
-        besoins.forEach((composant, necessaire) -> {
-            composant.setStock(composant.getStock().subtract(necessaire));
-            ConsommationEntity consommation = new ConsommationEntity();
-            consommation.setOrdre(ordre);
-            consommation.setArticle(composant);
-            consommation.setQuantite(necessaire);
-            ordre.getConsommations().add(consommation);
+    // F14 - à la fin : les composants réservés sortent du stock, et la quantité produite entre en stock
+    private void consommerComposants(OrdreFabricationEntity ordre) {
+        besoinsDe(ordre).forEach((composant, necessaire) -> {
+            composant.setQuantiteStock(composant.getQuantiteStock().subtract(necessaire).max(BigDecimal.ZERO));
+            composant.setQuantiteReservee(composant.getQuantiteReservee().subtract(necessaire).max(BigDecimal.ZERO));
         });
+        ArticleEntity produit = ordre.getArticle();
+        produit.setQuantiteStock(produit.getQuantiteStock().add(ordre.getQuantite()));
     }
 
-    // F14 - remet en stock les quantités réservées par l'ordre et efface les réservations
+    // F14 - un ordre lancé puis annulé rend ses réservations
     private void libererComposants(OrdreFabricationEntity ordre) {
-        for (ConsommationEntity consommation : ordre.getConsommations()) {
-            ArticleEntity composant = consommation.getArticle();
-            composant.setStock(composant.getStock().add(consommation.getQuantite()));
-        }
-        ordre.getConsommations().clear();
+        besoinsDe(ordre).forEach((composant, necessaire) ->
+                composant.setQuantiteReservee(composant.getQuantiteReservee().subtract(necessaire).max(BigDecimal.ZERO)));
     }
 
-    // F13 - change le statut et conserve le changement dans l'historique (horodaté automatiquement)
-    private void appliquerStatut(OrdreFabricationEntity ordre, StatutOrdre nouveauStatut) {
-        HistoriqueStatutEntity ligne = new HistoriqueStatutEntity();
-        ligne.setOrdre(ordre);
-        ligne.setAncienStatut(ordre.getStatut());
-        ligne.setNouveauStatut(nouveauStatut);
-        ordre.getHistorique().add(ligne);   // enregistré avec l'ordre grâce à la cascade
-        ordre.setStatut(nouveauStatut);
-    }
-
-    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; le statut n'est pas modifiable ici, F13)
+    // DTO -> Entity (ids transformés en objets, 404 s'ils n'existent pas ; seul un article FABRIQUE avec une durée unitaire
+    // se fabrique, 400) ; F12 - fin du créneau = date prévue + quantité × durée unitaire
     private void dtoVersEntity(OrdreFabricationRequestDTO dto, OrdreFabricationEntity ordre) {
         ArticleEntity article = trouverOu404(articleRepository, dto.getArticleId(), "Article");
         MachineEntity machine = trouverOu404(machineRepository, dto.getMachineId(), "Machine");
         OperateurEntity operateur = trouverOu404(operateurRepository, dto.getOperateurId(), "Opérateur");
+        if (article.getType() != TypeArticle.FABRIQUE || article.getDureeUnitaireMinutes() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "L'article " + article.getReference() + " doit être FABRIQUE et avoir une durée unitaire pour être fabriqué");
+        }
+        long minutes = dto.getQuantite().multiply(BigDecimal.valueOf(article.getDureeUnitaireMinutes()))
+                .setScale(0, RoundingMode.CEILING).longValue();
 
         ordre.setArticle(article);
         ordre.setQuantite(dto.getQuantite());
         ordre.setDatePrevue(dto.getDatePrevue());
+        ordre.setDateFinPrevue(dto.getDatePrevue().plusMinutes(minutes));
         ordre.setMachine(machine);
         ordre.setOperateur(operateur);
     }
@@ -234,23 +238,15 @@ public class OrdreFabricationService {
         dto.setArticleLibelle(ordre.getArticle().getLibelle());
         dto.setQuantite(ordre.getQuantite());
         dto.setDatePrevue(ordre.getDatePrevue());
-        dto.setDateFinPrevue(ordre.dateFinPrevue());   // F12
+        dto.setDateFinPrevue(ordre.getDateFinPrevue());          // F12
         dto.setStatut(ordre.getStatut());
         dto.setMachineId(ordre.getMachine().getId());
         dto.setMachineCode(ordre.getMachine().getCode());
         dto.setOperateurId(ordre.getOperateur().getId());
         dto.setOperateurNom(ordre.getOperateur().getNom());
-        dto.setRetardJours(ordre.getRetardJours());     // F16
-        if (ordre.getVersionNomenclature() != null) {   // F15
-            dto.setVersionNomenclature(ordre.getVersionNomenclature().getNumero());
-        }
-        dto.setHistorique(ordre.getHistorique().stream().map(h -> {   // F13
-            HistoriqueStatutDTO ligne = new HistoriqueStatutDTO();
-            ligne.setAncienStatut(h.getAncienStatut());
-            ligne.setNouveauStatut(h.getNouveauStatut());
-            ligne.setDateChangement(h.getDateChangement());
-            return ligne;
-        }).toList());
+        dto.setVersionNomenclature(ordre.getVersionNomenclature());   // F15
+        dto.setRetardJours(ordre.getRetardJours());              // F16
+        dto.setDateModification(ordre.getDateModification());    // F13
         return dto;
     }
 }
